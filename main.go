@@ -7,7 +7,7 @@ import (
 )
 
 var matrixMode bool = true
-var NodesNumber int = 5
+var NodesNumber uint8 = 5
 
 func main() {
 	var runner coreraft.Runner
