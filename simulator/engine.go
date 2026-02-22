@@ -15,6 +15,7 @@ type SimulationRunner struct {
 	NumberOfNodes uint8
 	TimeAdapt       coreraft.TimeAdapter
 	NetworkAdapt	   coreraft.TransportAdapter
+	FuzzyProbabilities *FuzzyConfig
 }
 
 type messageQueue struct{
@@ -145,7 +146,7 @@ func (s *SimulationRunner) Start() {
 						messagesToBroadcast, numberOfMessages:= node.Step(messageInbox.inbox[i])
 						if numberOfMessages>0{
 							// FUZZING FOR EACH MESSAGE AND APPEND THEM
-							fmt.Println(messagesToBroadcast)
+							fmt.Println(messagesToBroadcast)					
 						}
 					}
 				} 
@@ -156,7 +157,8 @@ func (s *SimulationRunner) Start() {
 		}
 
 		
-		// In this step the nodes should read the timeouts, and define them. in order to execute some things, leader election. ETC
+		/* In this step the nodes should read the timeouts, and define them.
+		 in order to execute some things, leader election. ETC */
 
 
 

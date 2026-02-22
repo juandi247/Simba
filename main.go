@@ -6,8 +6,11 @@ import (
 	"simba/simulator"
 )
 
-var matrixMode bool = true
-var NodesNumber uint8 = 5
+const matrixMode bool = true
+const NodesNumber uint8 = 5
+const SEED = 12345
+// By DEFAULT LOW but this should ve changed for the simulations, and for runtime too(?)
+const fuzzyLevel simulator.FuzzyLevel = simulator.LOW
 
 func main() {
 	var runner coreraft.Runner
@@ -23,10 +26,15 @@ func main() {
 		timeAdapter = &simulator.SimTime{
 			Tick: 0,
 		}
+
+		fuzzyConfig:= simulator.FuzzyConfiguration(SEED, fuzzyLevel)
+
 		runner = &simulator.SimulationRunner{
 			NumberOfNodes: NodesNumber,
 			TimeAdapt: timeAdapter,
 			NetworkAdapt: transportAdapter,
+			FuzzyProbabilities: &fuzzyConfig,
+			
 		}
 
 	} else {
