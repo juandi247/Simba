@@ -31,7 +31,9 @@ type Node struct {
 	CommitIndex       uint64		
 	HeartbeatTimeout  uint32
 	LeaderHeartbeatTime uint32
+	// SIMULATOR ONLY
 	Alive 			  bool
+	ComeBackToLiveTick int64
 }
 
 type Message struct {

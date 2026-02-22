@@ -15,20 +15,24 @@ type FuzzyConfig struct {
 	rand *rand.Rand
 	LatencyProb     float64
 	MessageLostProb float64
+	NodeCrashProb 	float64
 }
 
 var FuzzyConfigMap = map[FuzzyLevel]FuzzyConfig{
 	LOW: {
 		LatencyProb:     0.01,
 		MessageLostProb: 0.01,
+		NodeCrashProb: 0.01,
 	},
 	MEDIUM: {
 		LatencyProb:     0.05,
 		MessageLostProb: 0.05,
+		NodeCrashProb: 2.00,
 	},
 	HIGH: {
 		LatencyProb:     0.10,
 		MessageLostProb: 0.10,
+		NodeCrashProb: 5.00,
 	},
 }
 

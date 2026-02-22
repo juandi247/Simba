@@ -88,6 +88,9 @@ func (s *SimulationRunner) Start() {
 		// advance 1 tick
 		s.TimeAdapt.Advance(1)
 
+
+		// TODO: Here should be the calculation of probability of each node. Here is the crashing node fuzzy.
+
 		// Advance the time of the nodes before any processing of messages
 		for _ , node:= range nodeList{
 			if node.Id == node.Leader{
@@ -96,6 +99,14 @@ func (s *SimulationRunner) Start() {
 				node.HeartbeatTimeout--
 			}
 		} 
+		
+
+		/* 
+		 TODO:  ALSO HERE should be the logic of reading the tick of the nodes that are CRASHED, and if the current tick is 
+		 TODO: equal to the node tick to come back alive, we mark it as ALIVE=TRUE and restart the values of LeaderHEarbeat and HEARBEAT (this can be using the random because the flow is determnisitic)
+		*/
+
+
 
 
 			/* 
@@ -139,6 +150,11 @@ func (s *SimulationRunner) Start() {
 		if messageInbox.size>0{
 			// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
 			for _, node:= range nodeList{
+				//!Validation for crashed nodes, if its crashed, means that he SHOULD not receive or process mesages
+				if !node.Alive{
+					continue
+				}
+				//? Running NON FAULTY NODES
 				for i:=uint64(0); i<=messageInbox.size ; i++{
 					if node.Id == messageInbox.inbox[i].Receiver{
 						// here the RAFT would READ it
