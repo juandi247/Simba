@@ -28,9 +28,13 @@ type Node struct {
 	Leader            int
 	VotedFor          []string
 	Log               []string
-	CommitIndex       uint64		
-	HeartbeatTimeout  uint32
-	LeaderHeartbeatTime uint32
+	CommitIndex       uint64
+	
+	Timeout			uint32
+	Timeoutcounter uint32  //simulator
+
+	LeaderHeartbeat  uint32
+	LeaderHeartbeatCounter uint32  //simulator 
 	// SIMULATOR ONLY
 	Alive 			  bool
 	ComeBackToLiveTick int64

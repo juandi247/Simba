@@ -18,6 +18,13 @@ type FuzzyConfig struct {
 	NodeCrashProb 	float64
 }
 
+const minCrashNodeDowntime= 10
+const maxCrashNodeDowntime=50
+
+const minLatencyDelay= 10
+const maxLatencyDelay=50
+
+
 var FuzzyConfigMap = map[FuzzyLevel]FuzzyConfig{
 	LOW: {
 		LatencyProb:     0.01,
@@ -50,19 +57,34 @@ func FuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) (FuzzyConfig) {
 	return fuzzyConfig
 }
 
+
+func (fc *FuzzyConfig) determineCrashingOfNode()(bool, int64){
+
+	randomNumber:= fc.rand.Float64()
+
+	if randomNumber > fc.NodeCrashProb {
+		comeBackToLiveTick:=  minCrashNodeDowntime + fc.rand.Int63n(maxCrashNodeDowntime - minCrashNodeDowntime + 1)
+		return true, comeBackToLiveTick
+	}
+	return false, 0
+}
+
+
 /*
 this functions takes the configuration, and returns
-int: the number of ticks
 bool: if the message its dropped or not
+int: the number of delay ticks
 
 */
+func (fc *FuzzyConfig) RandomizeNetwork() (bool, int64){
+	randomNumber:= fc.rand.Float64()
 
+	if randomNumber > fc.MessageLostProb {
+		// The message was determinted to be LOST
+		return true, 0
+	}
 
-func (fc *FuzzyConfig) RandomizeNetwork(){
-	/*
-		There its the log from the fuzzy using the RAND, to obtain the probabilities of a message being dropped.
-		TODO:
-		  ?- (i think this is the bestone) Pass the message as parameter and return it so that its added to the QUEUE
-		  ?- ?Or dont receive any data and return the parametres of latency, message drop as return values, and then after assing them
-	*/
+	delayTicks:=  minLatencyDelay + fc.rand.Int63n(maxLatencyDelay - minLatencyDelay + 1)
+	return false, delayTicks
+
 }
