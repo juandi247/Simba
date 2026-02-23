@@ -9,6 +9,7 @@ import (
 const matrixMode bool = true
 const NodesNumber uint8 = 5
 const SEED = 12345
+
 // By DEFAULT LOW but this should ve changed for the simulations, and for runtime too(?)
 const fuzzyLevel simulator.FuzzyLevel = simulator.LOW
 
@@ -27,14 +28,13 @@ func main() {
 			Tick: 0,
 		}
 
-		fuzzyConfig:= simulator.FuzzyConfiguration(SEED, fuzzyLevel)
+		fuzzyConfig := simulator.FuzzyConfiguration(SEED, fuzzyLevel)
 
 		runner = &simulator.SimulationRunner{
-			NumberOfNodes: NodesNumber,
-			TimeAdapt: timeAdapter,
-			NetworkAdapt: transportAdapter,
+			NumberOfNodes:      NodesNumber,
+			TimeAdapt:          timeAdapter,
+			NetworkAdapt:       transportAdapter,
 			FuzzyProbabilities: &fuzzyConfig,
-			
 		}
 
 	} else {
@@ -47,5 +47,3 @@ func main() {
 
 	runner.Start()
 }
-
-
