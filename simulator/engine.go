@@ -83,8 +83,10 @@ func (s *SimulationRunner) Start() {
 
 		handleComeBackToLiveNode(nodeList, s.TimeAdapt.Now())
 
-		readMessagesToInbox(messageQueue, messageInbox, s.TimeAdapt.Now())
+		if messageQueue.size > 0 {
+			readMessagesToInbox(messageQueue, messageInbox, s.TimeAdapt.Now())
 
+		}
 		if messageInbox.size > 0 {
 			deliverInboxMessageS(messageInbox, *s.FuzzyProbabilities, nodeList, s.TimeAdapt.Now())
 		}
@@ -195,7 +197,7 @@ func deliverInboxMessageS(messageInbox *messageInbox, fuzzyProbabilites FuzzyCon
 
 	// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
 	/*The flow would be to read the messages and verify with the Map if the node is alive. This is to mantain DETERMNISM
-	 a MAP traversal is NOT Posible, because breaks the determinism of executiong!!! */
+	a MAP traversal is NOT Posible, because breaks the determinism of executiong!!! */
 	for _, node := range nodeList {
 		if !node.Alive {
 			continue
