@@ -59,23 +59,60 @@ func generateFollowerTimeout(rng *rand.Rand) uint32 {
 
 func (s *SimulationRunner) Start() {
 
-	nodeList := make([]*coreraft.Node, s.NumberOfNodes)
+	nodeList := initializeNodes(s.NumberOfNodes, *s.FuzzyProbabilities)
 
-	/* 1. create the nodes according to the number of nodes
-	assign them the values of id, term on 0, index on cero, everythingg on cero AND TIMING
-	Timing must be random for ticks  */
-	for i := 1; i <= int(s.NumberOfNodes); i++ {
+	messageQueue := &messageQueue{
+		queue:       make([]coreraft.Message, maxQueueSize),
+		size:        0,
+		copyCounter: 0,
+	}
 
-		//todo: Here should be the function of the heartBEat and Timeout fuzzy random generation
-		timeout := generateFollowerTimeout(s.FuzzyProbabilities.rand)
+	messageInbox := &messageInbox{
+		inbox: make([]coreraft.Message, maxInboxSize),
+		size:  0,
+	}
+
+	// Engine Loop of execution
+	for s.TimeAdapt.Now() <= maxTicks {
+		// advance 1 tick
+		s.TimeAdapt.Advance(1)
+
+		handleNodeCrash(nodeList, *s.FuzzyProbabilities, s.TimeAdapt.Now())
+
+		updateNodeTimers(nodeList)
+
+		handleComeBackToLiveNode(nodeList, s.TimeAdapt.Now())
+
+		readMessagesToInbox(messageQueue, messageInbox, s.TimeAdapt.Now())
+
+		if messageInbox.size > 0 {
+			deliverInboxMessageS(messageInbox, *s.FuzzyProbabilities, nodeList, s.TimeAdapt.Now())
+		}
+
+		/*
+			TODO: Next step where The nodes should read the timeouts, and define them.
+			TODO: in order to execute some things, leader election. ETC */
+
+	}
+}
+
+func (s *SimulationRunner) Stop() {
+}
+
+func initializeNodes(numberOfNodes uint8, fuzzyProbabilites FuzzyConfig) []*coreraft.Node {
+	nodeList := make([]*coreraft.Node, numberOfNodes)
+
+	for i := 1; i <= int(numberOfNodes); i++ {
+
+		timeout := generateFollowerTimeout(fuzzyProbabilites.rand)
 
 		nodeList[i-1] = &coreraft.Node{
 			Id:            i,
-			FriendNodesId: make([]int, s.NumberOfNodes-1),
+			FriendNodesId: make([]int, numberOfNodes-1),
 			Role:          coreraft.FOLLOWER,
 			Term:          0,
 			// Leader: , no leader because the comprobation of who is the leader, will be Id== LEader, so at the begining there is no elader
-			VotedFor:    make([]string, s.NumberOfNodes),
+			VotedFor:    make([]string, numberOfNodes),
 			Log:         make([]string, coreraft.MaxLogSize),
 			CommitIndex: 0,
 
@@ -90,134 +127,96 @@ func (s *SimulationRunner) Start() {
 		}
 	}
 
-	messageQueue := &messageQueue{
-		queue:       make([]coreraft.Message, maxQueueSize),
-		size:        0,
-		copyCounter: 0,
+	return nodeList
+
+}
+
+func handleNodeCrash(nodeList []*coreraft.Node, fuzzyProbabilites FuzzyConfig, currentTick int64) {
+	for _, node := range nodeList {
+		shouldCrash, comeBackToLiveTick := fuzzyProbabilites.determineCrashingProbabily()
+		if !shouldCrash {
+			continue
+		}
+		node.Alive = false
+		node.ComeBackToLiveTick = currentTick + comeBackToLiveTick
 	}
+}
 
-	messageInbox := &messageInbox{
-		inbox: make([]coreraft.Message, maxInboxSize),
-		size:  0,
+func updateNodeTimers(nodeList []*coreraft.Node) {
+	for _, node := range nodeList {
+		if node.Id == node.Leader {
+			node.LeaderHeartbeatCounter--
+		} else {
+			node.Timeoutcounter--
+		}
 	}
+}
 
-	/* 2. Start the for loop containing the engine
-	Inside the engine:
-		-Update tick
-		s.timing.Advance(1)
+func handleComeBackToLiveNode(nodeList []*coreraft.Node, currentTick int64) {
 
-		- Update tick on Nodes for the heartbeat (or that could go on raft logic, depends)
-
-	*/
-
-	// MAIN LOOP OF TICKS
-	for s.TimeAdapt.Now() <= maxTicks {
-		// advance 1 tick
-		s.TimeAdapt.Advance(1)
-
-		// Determine if the node crashes or NOT
-		for _, node := range nodeList {
-			shouldCrash, comeBackToLiveTick := s.FuzzyProbabilities.determineCrashingOfNode()
-			if !shouldCrash {
-				continue
-			}
-			node.Alive = false
-			node.ComeBackToLiveTick = s.TimeAdapt.Now() + comeBackToLiveTick
+	for _, node := range nodeList {
+		if node.ComeBackToLiveTick <= currentTick && !node.Alive {
+			node.Alive = true
 		}
 
-		// Advance the time of the nodes before any processing of messages
-		for _, node := range nodeList {
-			if node.Id == node.Leader {
-				node.LeaderHeartbeatCounter--
-			} else {
-				node.Timeoutcounter--
-			}
+		//This is to reestart the values of timeouts, so that the node starts Cleanly from scratch.
+		node.LeaderHeartbeatCounter = node.LeaderHeartbeat
+		node.Timeoutcounter = node.Timeout
+
+	}
+}
+
+func readMessagesToInbox(messageQueue *messageQueue, messageInbox *messageInbox, currentTick int64) {
+
+	for _, msg := range messageQueue.queue {
+		// Assertion for the case where tickFreq is only 1. when hacving a TickFReqcuency >=2 This is not valid
+		if msg.DeliveryTick < currentTick && TickFrequency == 1 {
+			panic("We found a message that has a lower Tick than the current, with a 1 tickfrecuency, there was something wrong")
 		}
 
-		/*
-		 !Verification of node coming back to live
-		*/
-		for _, node := range nodeList {
-			if node.ComeBackToLiveTick <= s.TimeAdapt.Now() && !node.Alive {
-				node.Alive = true
-			}
-			//?This is to reestart the values of timeouts, so that the node starts Cleanly from scratch.
-			node.LeaderHeartbeatCounter = node.LeaderHeartbeat
-			node.Timeoutcounter = node.Timeout
+		if msg.DeliveryTick <= currentTick {
+			// append the message to the inbox. (its really adding because we are preallocating everyything so its not an appnend!!!)
+			messageInbox.inbox[messageInbox.size] = msg
+			messageInbox.size++
 
+			// decrease the value of the size of the messagequeue, because we are deleting the value (but already allocated with size the queue)
+			messageQueue.size--
+			continue
 		}
 
-		/*
-			Steps:
-			Check with a for loop each one of the values inside the queue.
-			If the message has a <=Tick with the currentTick, we should add it to the inbox.
-			Update the inbox.
-			Decrease the size of the queue
-
-			Else we copy the value that was bigger than current, on the messageQueeue, with the copyCounter INdex
-			Update copycounter
-		*/
-
-		for _, msg := range messageQueue.queue {
-			//! ASSERTION
-			if msg.DeliveryTick < s.TimeAdapt.Now() && TickFrequency == 1 {
-				panic("We found a message that has a lower Tick than the current, with a 1 tickfrecuency, there was something wrong")
-			}
-
-			if msg.DeliveryTick <= s.TimeAdapt.Now() {
-				// append the message to the inbox. (its really adding because we are preallocating everyything so its not an appnend!!!)
-				messageInbox.inbox[messageInbox.size] = msg
-				messageInbox.size++
-
-				// decrease the value of the size of the messagequeue, because we are deleting the value (but already allocated with size the queue)
-				messageQueue.size--
-				continue
-			}
-
-			// if reached this point, the value of the tick of the message was bigger than the current, so we move it to the place within the copy counter
-			messageQueue.queue[messageQueue.copyCounter] = msg
-			messageQueue.copyCounter++
-		}
-
-		// DELIVER THE MESSAGES!
-		if messageInbox.size > 0 {
-			// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
-			for _, node := range nodeList {
-				//!Validation for crashed nodes, if its crashed, means that he SHOULD not receive or process mesages
-				if !node.Alive {
-					continue
-				}
-				//? Running NON FAULTY NODES
-				for i := uint64(0); i <= messageInbox.size; i++ {
-					if node.Id == messageInbox.inbox[i].Receiver {
-						// here the RAFT would READ it
-						// function of that
-						messagesToBroadcast, numberOfMessages := node.Step(messageInbox.inbox[i])
-						if numberOfMessages > 0 {
-							for _, msg := range messagesToBroadcast {
-								lost, delayTicks := s.FuzzyProbabilities.RandomizeNetwork()
-								if !lost {
-									msg.DeliveryTick = s.TimeAdapt.Now() + delayTicks
-									//TODO: function to send the message (append it to the queue)
-								}
-							}
-						}
-					}
-				}
-			}
-
-			// "empty" the inbox, because all the messages from it were read.
-			messageInbox.size = 0
-		}
-
-
-
-		/* In this step the nodes should read the timeouts, and define them.
-		in order to execute some things, leader election. ETC */
-
+		// if reached this point, the value of the tick of the message was bigger than the current, so we move it to the place within the copy counter
+		messageQueue.queue[messageQueue.copyCounter] = msg
+		messageQueue.copyCounter++
 	}
 
 }
 
-func (s *SimulationRunner) Stop() {
+func deliverInboxMessageS(messageInbox *messageInbox, fuzzyProbabilites FuzzyConfig, nodeList []*coreraft.Node, currentTick int64) {
+
+	// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
+	/*The flow would be to read the messages and verify with the Map if the node is alive. This is to mantain DETERMNISM
+	 a MAP traversal is NOT Posible, because breaks the determinism of executiong!!! */
+	for _, node := range nodeList {
+		if !node.Alive {
+			continue
+		}
+
+		for i := uint64(0); i <= messageInbox.size; i++ {
+			if node.Id == messageInbox.inbox[i].Receiver {
+				messagesToBroadcast, numberOfMessages := node.Step(messageInbox.inbox[i])
+				if numberOfMessages > 0 {
+					for _, msg := range messagesToBroadcast {
+						lost, delayTicks := fuzzyProbabilites.RandomizeNetwork()
+						if !lost {
+							msg.DeliveryTick = currentTick + delayTicks
+							//TODO: function to send the message (append it to the queue)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// "empty" the inbox, because all the messages from it were read.
+	messageInbox.size = 0
 }
