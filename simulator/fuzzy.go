@@ -58,7 +58,7 @@ func FuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) (FuzzyConfig) {
 }
 
 
-func (fc *FuzzyConfig) determineCrashingOfNode()(bool, int64){
+func (fc *FuzzyConfig) determineCrashingProbabily()(bool, int64){
 
 	randomNumber:= fc.rand.Float64()
 

@@ -159,11 +159,10 @@ func handleComeBackToLiveNode(nodeList []*coreraft.Node, currentTick int64) {
 	for _, node := range nodeList {
 		if node.ComeBackToLiveTick <= currentTick && !node.Alive {
 			node.Alive = true
+			//This is to reestart the values of timeouts, so that the node starts Cleanly from scratch.
+			node.LeaderHeartbeatCounter = node.LeaderHeartbeat
+			node.Timeoutcounter = node.Timeout
 		}
-
-		//This is to reestart the values of timeouts, so that the node starts Cleanly from scratch.
-		node.LeaderHeartbeatCounter = node.LeaderHeartbeat
-		node.Timeoutcounter = node.Timeout
 
 	}
 }
@@ -203,7 +202,7 @@ func deliverInboxMessageS(messageInbox *messageInbox, fuzzyProbabilites FuzzyCon
 			continue
 		}
 
-		for i := uint64(0); i <= messageInbox.size; i++ {
+		for i := uint64(0); i < messageInbox.size; i++ {
 			if node.Id == messageInbox.inbox[i].Receiver {
 				messagesToBroadcast, numberOfMessages := node.Step(messageInbox.inbox[i])
 				if numberOfMessages > 0 {
