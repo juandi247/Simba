@@ -52,21 +52,22 @@ type Message struct {
 // this limit is to have allways the LIMITS defined for the quantity of messages a node produces for a response or in generall
 const MaxMessagesToSend = 50
 
-func (n *Node) Step(msg Message) ([]Message, int) {
-	msgArr := make([]Message, MaxMessagesToSend)
-	size := 0
-
+func (n *Node) Step(msg Message, transportAdapter TransportAdapter) {
 	// HERE SHOULD BE THE LOGIC OF THE MESSAGES
 	switch msg.MessageType {
 	case HEARTBEAT:
 	case VOTATION:
 	case APPEND:
+		/*
+		the logic of the transport of messages or delivery is inside the interface, so it gets used inside the core wihtout knowing th implmenetation
+		this is just for testing (for now) but i think this could be the best option
+		*/
 	case ACK:
+		transportAdapter.SendMessage(Message{})
 
 	}
-
-	return msgArr, size
 }
+
 
 func (n *Node) Tick(timeAdapter TimeAdapter ,TransportAdapter TransportAdapter) {
 

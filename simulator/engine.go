@@ -37,20 +37,9 @@ func init() {
 
 type SimulationRunner struct {
 	NumberOfNodes      uint8
-	TimeAdapt          coreraft.TimeAdapter
-	TransportAdapt       coreraft.TransportAdapter
+	Time          *SimTime
+	Network       *SimNetwork
 	FuzzyProbabilities *FuzzyConfig
-}
-
-type messageQueue struct {
-	queue       []coreraft.Message
-	size        uint64
-	copyCounter uint64
-}
-
-type messageInbox struct {
-	inbox []coreraft.Message
-	size  uint64
 }
 
 func generateFollowerTimeout(rng *rand.Rand) uint32 {
@@ -59,40 +48,47 @@ func generateFollowerTimeout(rng *rand.Rand) uint32 {
 
 func (s *SimulationRunner) Start() {
 
+	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
 	nodeList := initializeNodes(s.NumberOfNodes, *s.FuzzyProbabilities)
 
-	messageQueue := &messageQueue{
+	// Config for the simulated Time struct
+	s.Time.Tick=0
+ 
+	// Config for the simulated Network struct
+	s.Network.TimeAdapter=s.Time
+	s.Network.messageQueue = &messageQueue{
 		queue:       make([]coreraft.Message, maxQueueSize),
 		size:        0,
 		copyCounter: 0,
 	}
 
-	messageInbox := &messageInbox{
+	s.Network.messageInbox = &messageInbox{
 		inbox: make([]coreraft.Message, maxInboxSize),
 		size:  0,
 	}
 
 	// Engine Loop of execution
-	for s.TimeAdapt.Now() <= maxTicks {
+	for s.Time.Now() <= maxTicks {
 		// advance 1 tick
-		s.TimeAdapt.Advance(TickFrequency)
+		s.Time.Advance(TickFrequency)
 
-		handleNodeCrash(nodeList, *s.FuzzyProbabilities, s.TimeAdapt.Now())
+		handleNodeCrash(nodeList, *s.FuzzyProbabilities, s.Time.Now())
 
 		updateNodeTimers(nodeList)
 
-		handleComeBackToLiveNode(nodeList, s.TimeAdapt.Now())
+		handleComeBackToLiveNode(nodeList, s.Time.Now())
 
-		if messageQueue.size > 0 {
-			readMessagesToInbox(messageQueue, messageInbox, s.TimeAdapt.Now())
+		//this is ONLY to read the queue and put the messages into the inbox. No logic of delivering messages to any node here. 
+		if s.Network.messageQueue.size > 0 {
+			readMessagesToInbox(s.Network)
 
 		}
-		if messageInbox.size > 0 {
-			deliverInboxMessageS(messageQueue, messageInbox, *s.FuzzyProbabilities, nodeList, s.TimeAdapt.Now())
+		if s.Network.messageInbox.size > 0 {
+			deliverInboxMessageS(s.Network, nodeList)
 		}
 
 		
-		handleTimeouts(nodeList, s.TimeAdapt, s.TransportAdapt)
+		handleTimeouts(nodeList, s.Time, s.Network)
 
 	}
 }
@@ -166,32 +162,32 @@ func handleComeBackToLiveNode(nodeList []*coreraft.Node, currentTick int64) {
 	}
 }
 
-func readMessagesToInbox(messageQueue *messageQueue, messageInbox *messageInbox, currentTick int64) {
+func readMessagesToInbox(sn *SimNetwork) {
 	
-	for _, msg := range messageQueue.queue {
+	for _, msg := range sn.messageQueue.queue {
 		// Assertion for the case where tickFreq is only 1. when hacving a TickFReqcuency >=2 This is not valid
-		if msg.DeliveryTick < currentTick && TickFrequency == 1 {
+		if msg.DeliveryTick < sn.TimeAdapter.Now() && TickFrequency == 1 {
 			panic("We found a message that has a lower Tick than the current, with a 1 tickfrecuency, there was something wrong")
 		}
 
-		if msg.DeliveryTick <= currentTick {
+		if msg.DeliveryTick <= sn.TimeAdapter.Now() {
 			// append the message to the inbox. (its really adding because we are preallocating everyything so its not an appnend!!!)
-			messageInbox.inbox[messageInbox.size] = msg
-			messageInbox.size++
+			sn.messageInbox.inbox[sn.messageInbox.size] = msg
+			sn.messageInbox.size++
 
 			// decrease the value of the size of the messagequeue, because we are deleting the value (but already allocated with size the queue)
-			messageQueue.size--
+			sn.messageQueue.size--
 			continue
 		}
 		
 		// if reached this point, the value of the tick of the message was bigger than the current, so we move it to the place within the copy counter
-		messageQueue.queue[messageQueue.copyCounter] = msg
-		messageQueue.copyCounter++
+		sn.messageQueue.queue[sn.messageQueue.copyCounter] = msg
+		sn.messageQueue.copyCounter++
 	}
 
 }
 
-func deliverInboxMessageS(messageQueue *messageQueue, messageInbox *messageInbox, fuzzyProbabilites FuzzyConfig, nodeList []*coreraft.Node, currentTick int64) {
+func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 
 	// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
 	/*The flow would be to read the messages and verify with the Map if the node is alive. This is to mantain DETERMNISM
@@ -201,40 +197,26 @@ func deliverInboxMessageS(messageQueue *messageQueue, messageInbox *messageInbox
 			continue
 		}
 		
-		for i := uint64(0); i < messageInbox.size; i++ {
-			if node.Id == messageInbox.inbox[i].Receiver {
-				messages, numberOfMessages := node.Step(messageInbox.inbox[i])
-				if numberOfMessages > 0 {
-					broadcastMessages(messageQueue, messages, fuzzyProbabilites, currentTick)
-				}
+		for i := uint64(0); i < sn.messageInbox.size; i++ {
+			if node.Id == sn.messageInbox.inbox[i].Receiver {
+				/* 
+				Now the logic of broadcsting a message will be used by the simulated Network struct, that is a TransportAdapter implementator.
+				The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
+				TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn	
+				*/
+				node.Step(sn.messageInbox.inbox[i], sn)
 			}
 		}
 	}
 	
 	// "empty" the inbox, because all the messages from it were read.
-	messageInbox.size = 0
+	sn.messageInbox.size = 0
 }
 
-func broadcastMessages(messageQueue *messageQueue, messages []coreraft.Message, fuzzyProbabilites FuzzyConfig, currentTick int64) {
-	for _, msg := range messages {
-		lost, delayTicks := fuzzyProbabilites.RandomizeNetwork()
-		// if the message is Lost, we simply dont add it to the messagequeue, simlating the LOST ont he network
-		// todo: there should be a tracker or something for the later UI that indicates that a message was LOST
-		if !lost {
-			msg.DeliveryTick = currentTick + delayTicks
 
-			if messageQueue.size >= maxQueueSize {
-				panic("MESSAGE QUEUE is FULL")
-			}
-			messageQueue.size++
-			messageQueue.queue[messageQueue.size] = msg
-		}
-	}
-}
 
 /* 
 ACA ya se habran reducido los tiks por nodo. por lo tanto lo unico seria validar el teimpo no?
-
 */
 func handleTimeouts(nodeList []*coreraft.Node, timeAdapter coreraft.TimeAdapter, transportAdapter coreraft.TransportAdapter) {
 	for _, node := range nodeList {
