@@ -1,5 +1,7 @@
 package coreraft
 
+import "fmt"
+
 type Role int
 
 const (
@@ -8,15 +10,26 @@ const (
 	LEADER
 )
 
+const NodesNumber uint8 = 5
+var Quorum uint8
 const MaxLogSize = 10000
 
+func init() {
+	Quorum = (NodesNumber / 2) + 1
+}
+
+/*
+todo: wrap the node struct in the simulator as SimNode{ node} so the fileds optionals like timeout counter, or leaderheartbeatcounter, etc, they are only on SIMULATOR
+*/
 type Node struct {
-	Id            int   //this would be probably ip addres, or something, not sure
-	FriendNodesId []int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
+	Id            int                  //this would be probably ip addres, or something, not sure
+	FriendNodesId [NodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
 	Role          Role
 	Term          uint64
 	Leader        int
-	VotedFor      []string
+
+	VotedFor      int
+	NumberOfVotes int
 	Log           []string //this is in memory LOG, this shuold be also by the network simlator or fuzzer modified time (BECAUSE its IO undeterminsitc)
 	CommitIndex   uint64
 
@@ -28,43 +41,70 @@ type Node struct {
 	// SIMULATOR ONLY
 	Alive              bool
 	ComeBackToLiveTick int64
+
+	// interfaces for implementations depending on simulator or real life
+	TimeAdapter      TimeAdapter
+	TransportAdapter TransportAdapter
+	StorageAdapter   StorageAdapter
 }
 
 
+func (n *Node) ProcessMesage(msg Message) {
 
-/*This is the procesing of messages */
-func (n *Node) ProcessMesage(msg Message, transportAdapter TransportAdapter, timeAdapter TimeAdapter) {
-	/*
-		the logic of the transport of messages or delivery is inside the interface, so it gets used inside the core wihtout knowing th implmenetation
-		this is just for testing (for now) but i think this could be the best option
-	*/
+	if msg.Term < n.Term {
+		fmt.Println("Hey we received an old message.")
+		n.SendMesage(UPDATEYOURDATA, msg.Sender, 0)
+		return
+	}
+
+
+	if msg.Term > n.Term{
+		n.Term= msg.Term
+		n.Role = FOLLOWER
+		n.VotedFor=0
+		n.NumberOfVotes=0
+		// todo: here weshould have a reset on timeouts (?)
+	}
+
 	switch msg.MessageType {
-	case HEARTBEAT:
-		if msg.Term < n.Term{
-			// means we have an OLD message, in this case we can send a message to the node, saying hey the current term now is this one
-			//n.SendMesage("hey you need to update your term", "hits is the leader for the term")
+
+	case VOTECONFIRMATION:
+		if n.Role!=CANDIDATE{
+			return
+		}
+
+		// todo: check if this is also for a Mutex, because this will be running on waiting for RPCs, so they can be 2 concurrnet updates or ++
+		n.NumberOfVotes++
+		if n.NumberOfVotes>= int(Quorum){
+			n.Role= LEADER
+			//todo:  reset timers or start timer for the leader
+			for _, receiver:= range n.FriendNodesId{
+				n.SendMesage(HEARTBEAT, receiver, 0)
+			}
+		}
+
+	case REQUESTVOTE:
+
+		if n.VotedFor !=0{
+			// means that we already voted for someone
 			return
 		}
 
 
-		//here should be the logic to reestart the timers
-		timeAdapter.RestartTimeoutTimer(n, )
+		//todo: check for the lastlogindex comparation between sender and receiver (?)
+		n.VotedFor = msg.Sender
+		n.SendMesage(VOTECONFIRMATION, msg.Sender, 0)
 
-
-
-	case ELECTION:
+	case HEARTBEAT:
+		//todo: reset the timeout imelmentation (we already checked that the term is valid)
 	case APPEND:
 	case ACK:
-		transportAdapter.SendMessage(Message{})
-
+	default:
+		fmt.Println("someone is sending random data(????)")
 	}
 }
 
-func (n *Node) Tick(timeAdapter TimeAdapter, TransportAdapter TransportAdapter) {
-	timeAdapter.DetermineTimeouts(n, TransportAdapter)
-}
-
-func (n *Node) SendMesage(messageType MessageType, receiver, LogIndex int, TransportAdapter TransportAdapter) {
+func (n *Node) SendMesage(messageType MessageType, receiver, LogIndex int) {
 
 	message := Message{
 		Sender:      n.Id,
@@ -74,9 +114,26 @@ func (n *Node) SendMesage(messageType MessageType, receiver, LogIndex int, Trans
 		LogIndex:    uint64(LogIndex),
 		//mesage delivery tick will be modified by the implmentation (in the case of sim) on the real its NOT used
 	}
-	TransportAdapter.SendMessage(message)
+	n.TransportAdapter.SendMessage(message)
 }
 
 
 
-// func (n *Node) 
+func (n *Node) StartElection() {
+	if n.Role == LEADER {
+		// assertion!!
+		panic("A Leader can NOT start an election, since he is already the leader")
+	}
+	//to cleanup everytime there is a new election, to prevent previous wrong 
+	n.NumberOfVotes=0
+	n.Term++
+	n.Role = CANDIDATE
+
+	
+	n.VotedFor = n.Id
+
+	for _, otherNodesId := range n.FriendNodesId {
+		n.SendMesage(REQUESTVOTE, otherNodesId, 0)
+	}
+
+}

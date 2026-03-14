@@ -36,7 +36,6 @@ func init() {
 }
 
 type SimulationRunner struct {
-	NumberOfNodes      uint8
 	Time               *SimTime
 	Network            *SimNetwork
 	FuzzyProbabilities FuzzyConfig
@@ -47,9 +46,6 @@ func generateFollowerTimeout(rng *rand.Rand) uint32 {
 }
 
 func (s *SimulationRunner) Start() {
-
-	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
-	nodeList := initializeNodes(s.NumberOfNodes, s.FuzzyProbabilities)
 
 	// Config for the simulated Time struct
 	s.Time.Tick = 0
@@ -67,6 +63,9 @@ func (s *SimulationRunner) Start() {
 		size:  0,
 	}
 	s.Network.FuzzyConfig = s.FuzzyProbabilities
+	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
+	nodeList := initializeNodes(s.FuzzyProbabilities, s.Time, s.Network)
+
 
 	// Engine Loop of execution
 	for s.Time.Now() <= maxTicks {
@@ -88,7 +87,7 @@ func (s *SimulationRunner) Start() {
 			deliverInboxMessageS(s.Network, nodeList)
 		}
 
-		handleTimeouts(nodeList, s.Time, s.Network)
+		handleTimeout(nodeList)
 
 	}
 }
@@ -96,20 +95,20 @@ func (s *SimulationRunner) Start() {
 func (s *SimulationRunner) Stop() {
 }
 
-func initializeNodes(numberOfNodes uint8, fuzzyProbabilites FuzzyConfig) []*coreraft.Node {
-	nodeList := make([]*coreraft.Node, numberOfNodes)
+func initializeNodes(fuzzyProbabilites FuzzyConfig, timeAdapter coreraft.TimeAdapter, TransportAdapter coreraft.TransportAdapter) []*coreraft.Node {
+	nodeList := make([]*coreraft.Node, coreraft.NodesNumber)
 
-	for i := 1; i <= int(numberOfNodes); i++ {
+	for i := 1; i <= int(coreraft.NodesNumber); i++ {
 
 		timeout := generateFollowerTimeout(fuzzyProbabilites.rand)
 
 		nodeList[i-1] = &coreraft.Node{
 			Id:            i,
-			FriendNodesId: make([]int, numberOfNodes-1),
+			FriendNodesId: [coreraft.NodesNumber - 1]int{},
 			Role:          coreraft.FOLLOWER,
 			Term:          0,
 			// Leader: , no leader because the comprobation of who is the leader, will be Id== LEader, so at the begining there is no elader
-			VotedFor:    make([]string, numberOfNodes),
+			VotedFor:    0,
 			Log:         make([]string, coreraft.MaxLogSize),
 			CommitIndex: 0,
 
@@ -121,6 +120,10 @@ func initializeNodes(numberOfNodes uint8, fuzzyProbabilites FuzzyConfig) []*core
 
 			Alive:              true,
 			ComeBackToLiveTick: 0,
+
+			TimeAdapter:      timeAdapter,
+			TransportAdapter: TransportAdapter,
+			//todo: storage adapter
 		}
 	}
 
@@ -204,7 +207,7 @@ func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 					The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
 					TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn
 				*/
-				node.ProcessMesage(sn.messageInbox.inbox[i], sn)
+				node.ProcessMesage(sn.messageInbox.inbox[i])
 			}
 		}
 	}
@@ -216,10 +219,20 @@ func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 /*
 ACA ya se habran reducido los tiks por nodo. por lo tanto lo unico seria validar el teimpo no?
 */
-func handleTimeouts(nodeList []*coreraft.Node, timeAdapter coreraft.TimeAdapter, transportAdapter coreraft.TransportAdapter) {
+func handleTimeout(nodeList []*coreraft.Node) {
+
 	for _, node := range nodeList {
 		if node.Alive {
-			node.Tick(timeAdapter, transportAdapter)
+			if node.Role== coreraft.LEADER && node.LeaderHeartbeat<=0{
+					for _, otherNode:= range node.FriendNodesId{
+						node.SendMesage(coreraft.HEARTBEAT, otherNode, 0)
+					}
+					continue
+			}
+			// for both FOLLOWER and CANDIDATE
+			if node.Timeoutcounter <= 0 {
+				node.StartElection()
+			}
 		}
 	}
 }

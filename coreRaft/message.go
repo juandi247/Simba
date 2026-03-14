@@ -4,9 +4,11 @@ type MessageType int
 
 const (
 	HEARTBEAT MessageType = iota
-	ELECTION              //todo: check this if there is only votation, or start election and votation separately
 	APPEND
 	ACK
+	REQUESTVOTE
+	VOTECONFIRMATION
+	UPDATEYOURDATA
 )
 
 
