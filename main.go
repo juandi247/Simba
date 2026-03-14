@@ -33,7 +33,7 @@ func main() {
 		runner = &simulator.SimulationRunner{
 			NumberOfNodes:      NodesNumber,
 			TimeAdapt:          timeAdapter,
-			NetworkAdapt:       transportAdapter,
+			TransportAdapt:       transportAdapter,
 			FuzzyProbabilities: &fuzzyConfig,
 		}
 

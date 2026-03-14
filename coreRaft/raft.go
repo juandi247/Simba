@@ -67,3 +67,21 @@ func (n *Node) Step(msg Message) ([]Message, int) {
 
 	return msgArr, size
 }
+
+func (n *Node) Tick(timeAdapter TimeAdapter ,TransportAdapter TransportAdapter) {
+
+
+	timeAdapter.DetermineTimeouts(n, TransportAdapter)
+	// TODO TOMORROW:
+	// Logica de Hearbeats y timeouts dentro de este tick
+	// ver chat
+	// Tambien ver el broadcast Logic, para meterlo dentro del propio
+}
+
+
+/* 
+creo que este tick deberia usar la interfaz.
+deberia de pronto en esta logica de ver 
+
+
+*/
