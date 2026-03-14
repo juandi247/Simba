@@ -22,8 +22,6 @@ type messageInbox struct {
 }
 
 func (s *SimNetwork) SendMessage(msg coreraft.Message) {
-	// Logic to append it to the queue
-
 	lost, delayTicks := s.FuzzyConfig.RandomizeNetwork()
 		// if the message is Lost, we simply dont add it to the messagequeue, simlating the LOST ont he network
 		// todo: there should be a tracker or something for the later UI that indicates that a message was LOST

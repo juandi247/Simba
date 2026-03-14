@@ -25,7 +25,7 @@ func main() {
 			NumberOfNodes:      NodesNumber,
 			Time:          &simulator.SimTime{},
 			Network:      &simulator.SimNetwork{},
-			FuzzyProbabilities: &fuzzyConfig,
+			FuzzyProbabilities: fuzzyConfig,
 		}
 
 	} else {

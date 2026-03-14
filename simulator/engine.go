@@ -37,9 +37,9 @@ func init() {
 
 type SimulationRunner struct {
 	NumberOfNodes      uint8
-	Time          *SimTime
-	Network       *SimNetwork
-	FuzzyProbabilities *FuzzyConfig
+	Time               *SimTime
+	Network            *SimNetwork
+	FuzzyProbabilities FuzzyConfig
 }
 
 func generateFollowerTimeout(rng *rand.Rand) uint32 {
@@ -49,13 +49,13 @@ func generateFollowerTimeout(rng *rand.Rand) uint32 {
 func (s *SimulationRunner) Start() {
 
 	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
-	nodeList := initializeNodes(s.NumberOfNodes, *s.FuzzyProbabilities)
+	nodeList := initializeNodes(s.NumberOfNodes, s.FuzzyProbabilities)
 
 	// Config for the simulated Time struct
-	s.Time.Tick=0
- 
+	s.Time.Tick = 0
+
 	// Config for the simulated Network struct
-	s.Network.TimeAdapter=s.Time
+	s.Network.TimeAdapter = s.Time
 	s.Network.messageQueue = &messageQueue{
 		queue:       make([]coreraft.Message, maxQueueSize),
 		size:        0,
@@ -66,19 +66,20 @@ func (s *SimulationRunner) Start() {
 		inbox: make([]coreraft.Message, maxInboxSize),
 		size:  0,
 	}
+	s.Network.FuzzyConfig = s.FuzzyProbabilities
 
 	// Engine Loop of execution
 	for s.Time.Now() <= maxTicks {
 		// advance 1 tick
 		s.Time.Advance(TickFrequency)
 
-		handleNodeCrash(nodeList, *s.FuzzyProbabilities, s.Time.Now())
+		handleNodeCrash(nodeList, s.FuzzyProbabilities, s.Time.Now())
 
 		updateNodeTimers(nodeList)
 
 		handleComeBackToLiveNode(nodeList, s.Time.Now())
 
-		//this is ONLY to read the queue and put the messages into the inbox. No logic of delivering messages to any node here. 
+		//this is ONLY to read the queue and put the messages into the inbox. No logic of delivering messages to any node here.
 		if s.Network.messageQueue.size > 0 {
 			readMessagesToInbox(s.Network)
 
@@ -87,7 +88,6 @@ func (s *SimulationRunner) Start() {
 			deliverInboxMessageS(s.Network, nodeList)
 		}
 
-		
 		handleTimeouts(nodeList, s.Time, s.Network)
 
 	}
@@ -98,9 +98,9 @@ func (s *SimulationRunner) Stop() {
 
 func initializeNodes(numberOfNodes uint8, fuzzyProbabilites FuzzyConfig) []*coreraft.Node {
 	nodeList := make([]*coreraft.Node, numberOfNodes)
-	
+
 	for i := 1; i <= int(numberOfNodes); i++ {
-		
+
 		timeout := generateFollowerTimeout(fuzzyProbabilites.rand)
 
 		nodeList[i-1] = &coreraft.Node{
@@ -115,10 +115,10 @@ func initializeNodes(numberOfNodes uint8, fuzzyProbabilites FuzzyConfig) []*core
 
 			Timeout:        timeout,
 			Timeoutcounter: timeout,
-			
+
 			LeaderHeartbeat:        LeaderHeartbeatFreq,
 			LeaderHeartbeatCounter: LeaderHeartbeatFreq,
-			
+
 			Alive:              true,
 			ComeBackToLiveTick: 0,
 		}
@@ -143,8 +143,8 @@ func updateNodeTimers(nodeList []*coreraft.Node) {
 	for _, node := range nodeList {
 		if node.Id == node.Leader {
 			node.LeaderHeartbeatCounter--
-			} else {
-				node.Timeoutcounter--
+		} else {
+			node.Timeoutcounter--
 		}
 	}
 }
@@ -163,7 +163,7 @@ func handleComeBackToLiveNode(nodeList []*coreraft.Node, currentTick int64) {
 }
 
 func readMessagesToInbox(sn *SimNetwork) {
-	
+
 	for _, msg := range sn.messageQueue.queue {
 		// Assertion for the case where tickFreq is only 1. when hacving a TickFReqcuency >=2 This is not valid
 		if msg.DeliveryTick < sn.TimeAdapter.Now() && TickFrequency == 1 {
@@ -179,7 +179,7 @@ func readMessagesToInbox(sn *SimNetwork) {
 			sn.messageQueue.size--
 			continue
 		}
-		
+
 		// if reached this point, the value of the tick of the message was bigger than the current, so we move it to the place within the copy counter
 		sn.messageQueue.queue[sn.messageQueue.copyCounter] = msg
 		sn.messageQueue.copyCounter++
@@ -196,26 +196,24 @@ func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 		if !node.Alive {
 			continue
 		}
-		
+
 		for i := uint64(0); i < sn.messageInbox.size; i++ {
 			if node.Id == sn.messageInbox.inbox[i].Receiver {
-				/* 
-				Now the logic of broadcsting a message will be used by the simulated Network struct, that is a TransportAdapter implementator.
-				The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
-				TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn	
+				/*
+					Now the logic of broadcsting a message will be used by the simulated Network struct, that is a TransportAdapter implementator.
+					The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
+					TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn
 				*/
 				node.Step(sn.messageInbox.inbox[i], sn)
 			}
 		}
 	}
-	
+
 	// "empty" the inbox, because all the messages from it were read.
 	sn.messageInbox.size = 0
 }
 
-
-
-/* 
+/*
 ACA ya se habran reducido los tiks por nodo. por lo tanto lo unico seria validar el teimpo no?
 */
 func handleTimeouts(nodeList []*coreraft.Node, timeAdapter coreraft.TimeAdapter, transportAdapter coreraft.TransportAdapter) {
