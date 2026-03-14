@@ -204,7 +204,7 @@ func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 					The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
 					TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn
 				*/
-				node.Step(sn.messageInbox.inbox[i], sn)
+				node.ProcessMesage(sn.messageInbox.inbox[i], sn)
 			}
 		}
 	}

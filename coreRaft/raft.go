@@ -8,15 +8,6 @@ const (
 	LEADER
 )
 
-type MessageType int
-
-const (
-	HEARTBEAT MessageType = iota
-	VOTATION              //todo: check this if there is only votation, or start election and votation separately
-	APPEND
-	ACK
-)
-
 const MaxLogSize = 10000
 
 type Node struct {
@@ -26,7 +17,7 @@ type Node struct {
 	Term          uint64
 	Leader        int
 	VotedFor      []string
-	Log           []string
+	Log           []string //this is in memory LOG, this shuold be also by the network simlator or fuzzer modified time (BECAUSE its IO undeterminsitc)
 	CommitIndex   uint64
 
 	Timeout        uint32
@@ -39,50 +30,53 @@ type Node struct {
 	ComeBackToLiveTick int64
 }
 
-type Message struct {
-	Sender      int
-	Receiver    int
-	Term        uint64
-	MessageType MessageType
-	LogIndex    uint64
-	// ONLY used for simulator
-	DeliveryTick int64
-}
 
-// this limit is to have allways the LIMITS defined for the quantity of messages a node produces for a response or in generall
-const MaxMessagesToSend = 50
 
-func (n *Node) Step(msg Message, transportAdapter TransportAdapter) {
-	// HERE SHOULD BE THE LOGIC OF THE MESSAGES
-	switch msg.MessageType {
-	case HEARTBEAT:
-	case VOTATION:
-	case APPEND:
-		/*
+/*This is the procesing of messages */
+func (n *Node) ProcessMesage(msg Message, transportAdapter TransportAdapter, timeAdapter TimeAdapter) {
+	/*
 		the logic of the transport of messages or delivery is inside the interface, so it gets used inside the core wihtout knowing th implmenetation
 		this is just for testing (for now) but i think this could be the best option
-		*/
+	*/
+	switch msg.MessageType {
+	case HEARTBEAT:
+		if msg.Term < n.Term{
+			// means we have an OLD message, in this case we can send a message to the node, saying hey the current term now is this one
+			//n.SendMesage("hey you need to update your term", "hits is the leader for the term")
+			return
+		}
+
+
+		//here should be the logic to reestart the timers
+		timeAdapter.RestartTimeoutTimer(n, )
+
+
+
+	case ELECTION:
+	case APPEND:
 	case ACK:
 		transportAdapter.SendMessage(Message{})
 
 	}
 }
 
-
-func (n *Node) Tick(timeAdapter TimeAdapter ,TransportAdapter TransportAdapter) {
-
-
+func (n *Node) Tick(timeAdapter TimeAdapter, TransportAdapter TransportAdapter) {
 	timeAdapter.DetermineTimeouts(n, TransportAdapter)
-	// TODO TOMORROW:
-	// Logica de Hearbeats y timeouts dentro de este tick
-	// ver chat
-	// Tambien ver el broadcast Logic, para meterlo dentro del propio
+}
+
+func (n *Node) SendMesage(messageType MessageType, receiver, LogIndex int, TransportAdapter TransportAdapter) {
+
+	message := Message{
+		Sender:      n.Id,
+		Receiver:    receiver,
+		Term:        n.Term,
+		MessageType: messageType,
+		LogIndex:    uint64(LogIndex),
+		//mesage delivery tick will be modified by the implmentation (in the case of sim) on the real its NOT used
+	}
+	TransportAdapter.SendMessage(message)
 }
 
 
-/* 
-creo que este tick deberia usar la interfaz.
-deberia de pronto en esta logica de ver 
 
-
-*/
+// func (n *Node) 
