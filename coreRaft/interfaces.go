@@ -6,7 +6,8 @@ type Runner interface {
 }
 
 type TransportAdapter interface {
-	SendMessage(Message)
+	AppendEntries(AppendEntriesMessage) AppendEntriesResponse
+	RequestVote(RequestVoteMessage) RequestVoteResponse
 }
 
 type TimeAdapter interface {
@@ -15,6 +16,6 @@ type TimeAdapter interface {
 	Sleep(int64)
 }
 
-type StorageAdapter interface{
+type StorageAdapter interface {
 	appendEntryLog()
 }

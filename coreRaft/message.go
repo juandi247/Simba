@@ -1,23 +1,36 @@
 package coreraft
 
-type MessageType int
+type AppendEntriesMessage struct {
+	Sender   int
+	Receiver int
+	Term     uint64
 
-const (
-	HEARTBEAT MessageType = iota
-	APPEND
-	ACK
-	REQUESTVOTE
-	VOTECONFIRMATION
-	UPDATEYOURDATA
-)
+	CommitIndex int
+	LastApplied int //todo: check if this one is worth it or not. dont thinkso but ok
 
-
-type Message struct {
-	Sender      int
-	Receiver    int
-	Term        uint64
-	MessageType MessageType
-	LogIndex    uint64
+	NextIndex  int
+	MatchIndex int
 	// ONLY used for simulator
 	DeliveryTick int64
+}
+
+type AppendEntriesResponse struct {
+	Term    int
+	Success bool
+}
+
+type RequestVoteMessage struct {
+	Sender   int
+	Receiver int
+	Term     uint64
+
+	LastLogIndex  int
+	LastTermIndex int
+	// ONLY used for simulator
+	DeliveryTick int64
+}
+
+type RequestVoteResponse struct {
+	Term        int
+	VoteGranted bool
 }

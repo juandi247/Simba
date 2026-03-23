@@ -14,7 +14,6 @@ const fuzzyLevel simulator.FuzzyLevel = simulator.LOW
 
 func main() {
 	var runner coreraft.Runner
-	
 
 	if matrixMode {
 		

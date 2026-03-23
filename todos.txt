@@ -1,0 +1,39 @@
+TODOS FOR NOW:
+FLUJOS:
+- Entender el flujo general de commitear mensajes (commitIndex del lider)
+- Entender el flujo de rechazo de mensaje. Que pasa si un nodo followe rtiene su log desactualizado O distinto, etnoces toca manejar el caso
+        if prevLogIndex > len(log) OR log[prevLogIndex].term != prevLogTerm:
+            reject
+
+- Entender el flujo ahora de rechazo en una votacion, comparacoin de logs entre candidatos
+
+
+
+
+- implement the logic of validating LastLogIndex vs LastTermINdex
+- implement the logic of heartbeats  - a separate gorouitnoe using a timer (or a ticker)
+
+
+
+
+Simulator: 
+- Add checker that shows how the state of the queue is (this can be updated inside the normal engine cycle)
+
+Reality: 
+
+- Start the configuration of the web server
+- Configure the Node
+- Have a map for all the nodes, (some config to manage ips) 
+
+- Configuration from time manager, goroutiones to handle the timeouts. 
+
+CORE: 
+
+- Start the configuration for messages
+    - Healthcheck: this will reestart the value of the timeout on the current Time, so this can be also an interface method
+    -Commit
+    -Start a new Election (update term)
+    - Append Log
+- 
+
+
