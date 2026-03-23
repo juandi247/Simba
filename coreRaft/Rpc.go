@@ -16,8 +16,8 @@ func (n *Node) AppendEntries(request AppendEntriesMessage) AppendEntriesResponse
 
 	n.VotedFor = request.Sender
 
-	//todo: check for the lastlogindex comparation between sender and receiver (?)
-	//todo: also check the message term, and react it.
+	//TODO: check for the lastlogindex comparation between sender and receiver (?)
+	//TODO: also check the message term, and react it.
 
 	return AppendEntriesResponse{
 		Term:    int(n.CurrentTerm),

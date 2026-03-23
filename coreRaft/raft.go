@@ -23,7 +23,7 @@ func init() {
 }
 
 /*
-todo: wrap the node struct in the simulator as SimNode{ node} so the fileds optionals like timeout counter, or leaderheartbeatcounter, etc, they are only on SIMULATOR
+TODO: wrap the node struct in the simulator as SimNode{ node} so the fileds optionals like timeout counter, or leaderheartbeatcounter, etc, they are only on SIMULATOR
 */
 type Node struct {
 	//Persistent values
