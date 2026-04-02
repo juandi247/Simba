@@ -12,14 +12,14 @@ const (
 	LEADER
 )
 
-const NodesNumber uint8 = 5
+const TotalNodesNumber uint8 = 5
 
 var Quorum uint8
 
-const MaxLogSize = 10000
+const MaxLogSize int = 10000
 
 func init() {
-	Quorum = (NodesNumber / 2) + 1
+	Quorum = (TotalNodesNumber / 2) + 1
 }
 
 /*
@@ -32,7 +32,7 @@ type Node struct {
 	VotedFor    int
 
 	Id            int                  //this would be probably ip addres, or something, not sure
-	FriendNodesId [NodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
+	FriendNodesId [TotalNodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
 	Role          Role
 	Leader        int
 	NumberOfVotes atomic.Int32
@@ -43,18 +43,13 @@ type Node struct {
 	MatchIndex      map[int]int
 	Timeout         uint32
 	LeaderHeartbeat uint32
-	Adapters        Adapters
-}
 
-type Adapters struct {
-	TimeAdapter      TimeAdapter
-	TransportAdapter TransportAdapter
-	StorageAdapter   StorageAdapter
+	SimulatorFields SimulatorFields
 }
 
 type Log struct {
 	Size    int
-	LogBase []LogBase
+	LogArr []LogBase
 }
 
 type LogBase struct {
@@ -68,7 +63,6 @@ type SimulatorFields struct {
 	Alive                  bool
 	ComeBackToLiveTick     int64
 }
-
 func (n *Node) StartElection() {
 	n.RoleTransition(CANDIDATE)
 	n.VotedFor = n.Id
@@ -96,3 +90,5 @@ func (n *Node) RoleTransition(targetRole Role) {
 	}
 
 }
+
+
