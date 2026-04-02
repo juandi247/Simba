@@ -1,4 +1,4 @@
-package coreraft
+package adapters
 
 type Runner interface {
 	Start()
@@ -6,7 +6,7 @@ type Runner interface {
 }
 
 type TransportAdapter interface {
-	SendMessage(Message)
+//	SendMessage(Message)
 }
 
 type TimeAdapter interface {

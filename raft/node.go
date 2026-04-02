@@ -1,11 +1,8 @@
-package coreraft
+package raft
 
-import (
-	"sync/atomic"
-)
+
 
 type Role int
-
 const (
 	FOLLOWER Role = iota
 	CANDIDATE
@@ -35,7 +32,7 @@ type Node struct {
 	FriendNodesId [TotalNodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
 	Role          Role
 	Leader        int
-	NumberOfVotes atomic.Int32
+	NumberOfVotes int
 	CommitIndex   uint64
 
 	//key= id , value = the index
@@ -62,33 +59,6 @@ type SimulatorFields struct {
 	LeaderHeartbeatCounter uint32 //simulator
 	Alive                  bool
 	ComeBackToLiveTick     int64
-}
-func (n *Node) StartElection() {
-	n.RoleTransition(CANDIDATE)
-	n.VotedFor = n.Id
-
-	for _, otherNodesId := range n.FriendNodesId {
-		n.sendRequestVote(otherNodesId)
-	}
-
-}
-
-func (n *Node) RoleTransition(targetRole Role) {
-
-	switch targetRole {
-	case FOLLOWER:
-	case LEADER:
-	case CANDIDATE:
-		if n.Role == LEADER {
-			// assertion!!
-			panic("A Leader can NOT start an election, since he is already the leader")
-		}
-		//to cleanup everytime there is a new election, to prevent previous wrong
-		n.NumberOfVotes.Store(0)
-		n.CurrentTerm++
-		n.Role = CANDIDATE
-	}
-
 }
 
 

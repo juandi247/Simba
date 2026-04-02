@@ -1,7 +1,7 @@
 package main
 
 import (
-	coreraft "simba/coreRaft"
+	"simba/adapters"
 	// "simba/reality"
 	"simba/simulator"
 )
@@ -13,7 +13,7 @@ const SEED = 12345
 const fuzzyLevel simulator.FuzzyLevel = simulator.LOW
 
 func main() {
-	var runner coreraft.Runner
+	var runner adapters.Runner
 
 	if matrixMode {
 		
