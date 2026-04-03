@@ -3,7 +3,7 @@ package raft
 //arbitrary value
 const MaxNumberMessages = TotalNodesNumber + 25
 
-func (n *Node) messageFSM(message Message) []Message {
+func (n *Node) ProcessMessage(message Message) []Message {
 
 	switch m := message.(type) {
 	//todo: they need to implement the interface, thats why the error appears

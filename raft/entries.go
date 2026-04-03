@@ -14,7 +14,7 @@ func (n *Node) AppendToLog(entry NewEntry) []Message {
 		Term:  int(n.CurrentTerm),
 		Entry: entry.Command,
 	}
-	n.Log.LogArr[ls] = logEntry
+	n.Log.LogArr[ls] = &logEntry
 
 	msgArr := newMessages()
 	for _, receiverId := range n.FriendNodesId {

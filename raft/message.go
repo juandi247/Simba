@@ -21,9 +21,9 @@ type Message interface {
 }
 
 type AppendEntries struct {
-	Sender   int
-	Receiver int
-	Term     uint64
+	Sender     int
+	Receiver   int
+	Term       uint64
 	LogEntries []LogBase
 
 	CommitIndex int

@@ -41,12 +41,12 @@ type Node struct {
 	Timeout         uint32
 	LeaderHeartbeat uint32
 
-	SimulatorFields SimulatorFields
+	SimulatorFields *SimulatorFields
 }
 
 type Log struct {
 	Size    int
-	LogArr []LogBase
+	LogArr []*LogBase
 }
 
 type LogBase struct {
