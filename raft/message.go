@@ -32,8 +32,6 @@ type AppendEntries struct {
 
 	NextIndex  int
 	MatchIndex int
-	// ONLY used for simulator
-	DeliveryTick int64
 }
 
 type AppendEntriesResponse struct {
