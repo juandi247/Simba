@@ -88,7 +88,6 @@ func (s *SimulationRunner) Start() {
 
 		handleTimeout(nodeList, s.Network)
 
-
 	}
 }
 
@@ -190,16 +189,14 @@ func readMessagesToInbox(sn *SimNetwork) {
 
 }
 
-func shuffleInbox(rand *rand.Rand, sn *SimNetwork ){
+func shuffleInbox(rand *rand.Rand, sn *SimNetwork) {
 	rand.Shuffle(int(sn.messageInbox.size), func(i, j int) {
-sn.messageInbox.inbox[i], sn.messageInbox.inbox[j]  = sn.messageInbox.inbox[j], sn.messageInbox.inbox[i] 
+		sn.messageInbox.inbox[i], sn.messageInbox.inbox[j] = sn.messageInbox.inbox[j], sn.messageInbox.inbox[i]
 	})
 
 }
 
-
 func deliverInboxMessages(sn *SimNetwork, nodeList []*raft.Node) {
-
 
 	// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
 	for _, node := range nodeList {

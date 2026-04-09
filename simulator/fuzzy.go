@@ -53,7 +53,6 @@ func FuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) (FuzzyConfig) {
 		panic("Assertion for variable of fuzzy level")
 	}
 	fuzzyConfig.rand=rand
-
 	return fuzzyConfig
 }
 

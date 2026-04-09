@@ -2,7 +2,7 @@ package raft
 
 func (n *Node) StartElection() []Message {
 	n.RoleTransition(CANDIDATE)
-	n.NumberOfVotes=0
+	n.NumberOfVotes = 0
 	n.CurrentTerm++
 	n.VotedFor = n.Id
 
@@ -70,12 +70,14 @@ func (n *Node) BecomeLeader() []Message {
 	return messages
 }
 
-
-func (n *Node) TriggerTimeout() []Message{
+func (n *Node) TriggerTimeout() []Message {
 	messages := newMessages()
-	messages = append(messages, HeartbeatTimeout{
-	})
+	messages = append(messages, LeaderTimeout{})
 	return messages
 }
 
-
+func (n *Node) TriggerHeartbeat() []Message {
+	messages := newMessages()
+	messages = append(messages, HeartbeatTimeout{})
+	return messages
+}

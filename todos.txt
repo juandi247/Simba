@@ -41,7 +41,7 @@ CORE:
 
  
 TODOS GOOD: 
--Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type)
+-Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type) 
 
 -Switch state machine for all message types
 
@@ -49,7 +49,7 @@ TODOS GOOD:
 
 -Adapters (network, timer) owned by the engine loop, not the core
 
--Shuffle eligible events within a tick, seeded rng for reproducibility
+- (X) Shuffle eligible events within a tick, seeded rng for reproducibility
 
 -Single threaded processing loop, bounded channel, bounded worker pool for sends
 
