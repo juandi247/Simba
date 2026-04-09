@@ -18,6 +18,7 @@ type Message interface {
 	example: the new entry does not have a term, because comes directly from the client
 	*/
 	GetTerm() (int, bool)
+	GetReceiver() int
 }
 
 type AppendEntries struct {
@@ -123,4 +124,35 @@ func (m HeartbeatTimeout) GetType() MessageType {
 }
 func (m HeartbeatTimeout) GetTerm() (int, bool) {
 	return 0, false
+}
+
+
+
+//workaround to get the receiver so that the message queue can deliver the message 
+func (m AppendEntries) GetReceiver() int {
+	return m.GetReceiver()
+}
+
+func (m AppendEntriesResponse) GetReceiver() int {
+	return m.GetReceiver()
+}
+
+func (m RequestVote) GetReceiver() int {
+	return m.GetReceiver()
+}
+
+func (m RequestVoteResponse) GetReceiver() int {
+	return m.GetReceiver()
+}
+
+
+func (m NewEntry) GetReceiver() int {
+	return m.GetReceiver()
+}
+
+func (m LeaderTimeout) GetReceiver() int {
+	return m.GetReceiver()
+}
+func (m HeartbeatTimeout) GetReceiver() int {
+	return m.GetReceiver()
 }

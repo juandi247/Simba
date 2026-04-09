@@ -2,7 +2,7 @@ package simulator
 
 import (
 	"math/rand"
-	coreraft "simba/coreRaft"
+	raft "simba/raft"
 )
 
 const TickFrequency = 1
@@ -53,19 +53,18 @@ func (s *SimulationRunner) Start() {
 	// Config for the simulated Network struct
 	s.Network.TimeAdapter = s.Time
 	s.Network.messageQueue = &messageQueue{
-		queue:       make([]coreraft.Message, maxQueueSize),
+		queue:       make([]SimMessage, maxQueueSize),
 		size:        0,
 		copyCounter: 0,
 	}
 
 	s.Network.messageInbox = &messageInbox{
-		inbox: make([]coreraft.Message, maxInboxSize),
+		inbox: make([]raft.Message, maxInboxSize),
 		size:  0,
 	}
 	s.Network.FuzzyConfig = s.FuzzyProbabilities
 	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
-	nodeList := initializeNodes(s.FuzzyProbabilities, s.Time, s.Network)
-
+	nodeList := initializeNodes(s.FuzzyProbabilities)
 
 	// Engine Loop of execution
 	for s.Time.Now() <= maxTicks {
@@ -84,10 +83,11 @@ func (s *SimulationRunner) Start() {
 
 		}
 		if s.Network.messageInbox.size > 0 {
-			deliverInboxMessageS(s.Network, nodeList)
+			deliverInboxMessages(s.Network, nodeList)
 		}
 
-		handleTimeout(nodeList)
+		handleTimeout(nodeList, s.Network)
+
 
 	}
 }
@@ -95,35 +95,35 @@ func (s *SimulationRunner) Start() {
 func (s *SimulationRunner) Stop() {
 }
 
-func initializeNodes(fuzzyProbabilites FuzzyConfig, timeAdapter coreraft.TimeAdapter, TransportAdapter coreraft.TransportAdapter) []*coreraft.Node {
-	nodeList := make([]*coreraft.Node, coreraft.NodesNumber)
+func initializeNodes(fuzzyProbabilites FuzzyConfig) []*raft.Node {
+	nodeList := make([]*raft.Node, raft.TotalNodesNumber)
 
-	for i := 1; i <= int(coreraft.NodesNumber); i++ {
+	for i := 1; i <= int(raft.TotalNodesNumber); i++ {
 
 		timeout := generateFollowerTimeout(fuzzyProbabilites.rand)
 
-		nodeList[i-1] = &coreraft.Node{
+		nodeList[i-1] = &raft.Node{
 			Id:            i,
-			FriendNodesId: [coreraft.NodesNumber - 1]int{},
-			Role:          coreraft.FOLLOWER,
-			Term:          0,
-			// Leader: , no leader because the comprobation of who is the leader, will be Id== LEader, so at the begining there is no elader
-			VotedFor:    0,
-			Log:         make([]string, coreraft.MaxLogSize),
-			CommitIndex: 0,
+			FriendNodesId: [raft.TotalNodesNumber - 1]int{},
+			Role:          raft.FOLLOWER,
+			CurrentTerm:   0,
+			//leader NOT USED because all will start as candidates. so this will be null for now (or cero)
+			Leader:   0,
+			VotedFor: 0,
+			Log: raft.Log{
+				Size:   0,
+				LogArr: make([]*raft.LogBase, raft.MaxLogSize),
+			},
+			CommitIndex:     0,
+			Timeout:         timeout,
+			LeaderHeartbeat: LeaderHeartbeatFreq,
 
-			Timeout:        timeout,
-			Timeoutcounter: timeout,
-
-			LeaderHeartbeat:        LeaderHeartbeatFreq,
-			LeaderHeartbeatCounter: LeaderHeartbeatFreq,
-
-			Alive:              true,
-			ComeBackToLiveTick: 0,
-
-			TimeAdapter:      timeAdapter,
-			TransportAdapter: TransportAdapter,
-			//todo: storage adapter
+			SimulatorFields: &raft.SimulatorFields{
+				LeaderHeartbeatCounter: LeaderHeartbeatFreq,
+				Alive:                  true,
+				ComeBackToLiveTick:     0,
+				Timeoutcounter:         timeout,
+			},
 		}
 	}
 
@@ -131,35 +131,35 @@ func initializeNodes(fuzzyProbabilites FuzzyConfig, timeAdapter coreraft.TimeAda
 
 }
 
-func handleNodeCrash(nodeList []*coreraft.Node, fuzzyProbabilites FuzzyConfig, currentTick int64) {
+func handleNodeCrash(nodeList []*raft.Node, fuzzyProbabilites FuzzyConfig, currentTick int64) {
 	for _, node := range nodeList {
 		shouldCrash, comeBackToLiveTick := fuzzyProbabilites.determineCrashingProbabily()
 		if !shouldCrash {
 			continue
 		}
-		node.Alive = false
-		node.ComeBackToLiveTick = currentTick + comeBackToLiveTick
+		node.SimulatorFields.Alive = false
+		node.SimulatorFields.ComeBackToLiveTick = currentTick + comeBackToLiveTick
 	}
 }
 
-func updateNodeTimers(nodeList []*coreraft.Node) {
+func updateNodeTimers(nodeList []*raft.Node) {
 	for _, node := range nodeList {
 		if node.Id == node.Leader {
-			node.LeaderHeartbeatCounter--
+			node.SimulatorFields.LeaderHeartbeatCounter--
 		} else {
-			node.Timeoutcounter--
+			node.SimulatorFields.Timeoutcounter--
 		}
 	}
 }
 
-func handleComeBackToLiveNode(nodeList []*coreraft.Node, currentTick int64) {
+func handleComeBackToLiveNode(nodeList []*raft.Node, currentTick int64) {
 
 	for _, node := range nodeList {
-		if node.ComeBackToLiveTick <= currentTick && !node.Alive {
-			node.Alive = true
+		if node.SimulatorFields.ComeBackToLiveTick <= currentTick && !node.SimulatorFields.Alive {
+			node.SimulatorFields.Alive = true
 			//This is to reestart the values of timeouts, so that the node starts Cleanly from scratch.
-			node.LeaderHeartbeatCounter = node.LeaderHeartbeat
-			node.Timeoutcounter = node.Timeout
+			node.SimulatorFields.LeaderHeartbeatCounter = node.LeaderHeartbeat
+			node.SimulatorFields.Timeoutcounter = node.Timeout
 		}
 
 	}
@@ -175,7 +175,7 @@ func readMessagesToInbox(sn *SimNetwork) {
 
 		if msg.DeliveryTick <= sn.TimeAdapter.Now() {
 			// append the message to the inbox. (its really adding because we are preallocating everyything so its not an appnend!!!)
-			sn.messageInbox.inbox[sn.messageInbox.size] = msg
+			sn.messageInbox.inbox[sn.messageInbox.size] = msg.Message
 			sn.messageInbox.size++
 
 			// decrease the value of the size of the messagequeue, because we are deleting the value (but already allocated with size the queue)
@@ -190,24 +190,27 @@ func readMessagesToInbox(sn *SimNetwork) {
 
 }
 
-func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
+func shuffleInbox(rand *rand.Rand, sn *SimNetwork ){
+	rand.Shuffle(int(sn.messageInbox.size), func(i, j int) {
+sn.messageInbox.inbox[i], sn.messageInbox.inbox[j]  = sn.messageInbox.inbox[j], sn.messageInbox.inbox[i] 
+	})
+
+}
+
+
+func deliverInboxMessages(sn *SimNetwork, nodeList []*raft.Node) {
+
 
 	// todo: easier to use a MAP instead of a nested for loop in this case, but meh later
-	/*The flow would be to read the messages and verify with the Map if the node is alive. This is to mantain DETERMNISM
-	a MAP traversal is NOT Posible, because breaks the determinism of executiong!!! */
 	for _, node := range nodeList {
-		if !node.Alive {
+		if !node.SimulatorFields.Alive {
 			continue
 		}
 
 		for i := uint64(0); i < sn.messageInbox.size; i++ {
-			if node.Id == sn.messageInbox.inbox[i].Receiver {
-				/*
-					Now the logic of broadcsting a message will be used by the simulated Network struct, that is a TransportAdapter implementator.
-					The Step depending on what the message is, will (or not) send a message. When sending a message the core raft will use the interface
-					TransportAdapter.sendMessage but the implementation is the one that we defined previously here. its sn
-				*/
-				node.ProcessMesage(sn.messageInbox.inbox[i])
+			if node.Id == sn.messageInbox.inbox[i].GetReceiver() {
+				messagesToSend := node.ProcessMessage(sn.messageInbox.inbox[i])
+				sn.SendMessage(messagesToSend)
 			}
 		}
 	}
@@ -219,20 +222,24 @@ func deliverInboxMessageS(sn *SimNetwork, nodeList []*coreraft.Node) {
 /*
 ACA ya se habran reducido los tiks por nodo. por lo tanto lo unico seria validar el teimpo no?
 */
-func handleTimeout(nodeList []*coreraft.Node) {
+func handleTimeout(nodeList []*raft.Node, sm *SimNetwork) {
 
 	for _, node := range nodeList {
-		if node.Alive {
-			if node.Role== coreraft.LEADER && node.LeaderHeartbeat<=0{
-					for _, otherNode:= range node.FriendNodesId{
-						node.SendMesage(coreraft.HEARTBEAT, otherNode, 0)
-					}
-					continue
-			}
-			// for both FOLLOWER and CANDIDATE
-			if node.Timeoutcounter <= 0 {
-				node.StartElection()
-			}
+		if !node.SimulatorFields.Alive {
+			return
+		}
+
+		if node.Role == raft.LEADER && int(node.SimulatorFields.LeaderHeartbeatCounter) <= 0 {
+			msg := node.TriggerHeartbeat()
+			sm.SendMessage(msg)
+			continue
+		}
+
+		// for both FOLLOWER and CANDIDATE
+		if node.SimulatorFields.Timeoutcounter <= 0 {
+			timeoutMessage := node.TriggerTimeout()
+			//this message will triger a timeout election
+			sm.SendMessage(timeoutMessage)
 		}
 	}
 }

@@ -37,3 +37,30 @@ CORE:
 - 
 
 
+
+
+ 
+TODOS GOOD: 
+-Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type)
+
+-Switch state machine for all message types
+
+-En el switch poner o tneer algo para handlers, especificos, que puedan tener validacion con un middleware para evaluar el TERM, asi evitamos ponerle el GetGerm a la interface, y simplificamos todo. 
+
+-Adapters (network, timer) owned by the engine loop, not the core
+
+-Shuffle eligible events within a tick, seeded rng for reproducibility
+
+-Single threaded processing loop, bounded channel, bounded worker pool for sends
+
+-ON the real implmenetation, the worker pool will only, fire and wait for the acknowledgment that the messagearrived. 
+
+Its NOT that the goroutine wait for the response. 
+
+The one in charge of that is the server itself and then the response will come from the previous received as a new message.
+
+- on the grpc call, we just need to send a type of NetworkMessage it will look something like: 
+	NetworkMessage{
+	typeOfMessage: type  (this is to know which type to cast)
+	payload: bytes (this payload is the serialized data, coming from the struct used)
+	} so that the fucntion of receving, will pass

@@ -69,3 +69,13 @@ func (n *Node) BecomeLeader() []Message {
 
 	return messages
 }
+
+
+func (n *Node) TriggerTimeout() []Message{
+	messages := newMessages()
+	messages = append(messages, HeartbeatTimeout{
+	})
+	return messages
+}
+
+
