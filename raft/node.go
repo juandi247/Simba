@@ -40,6 +40,7 @@ type Node struct {
 	MatchIndex      map[int]int
 	Timeout         uint32
 	LeaderHeartbeat uint32
+	ElectionTimeout uint32
 
 	SimulatorFields *SimulatorFields
 }
@@ -55,10 +56,11 @@ type LogBase struct {
 }
 
 type SimulatorFields struct {
-	Timeoutcounter         uint32 //simulator
-	LeaderHeartbeatCounter uint32 //simulator
+	Timeoutcounter         uint32 
+	LeaderHeartbeatCounter uint32 
 	Alive                  bool
 	ComeBackToLiveTick     int64
+	ElectionTimeoutCounter uint32
 }
 
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"simba/adapters"
 	// "simba/reality"
 	"simba/simulator"
@@ -32,6 +33,6 @@ func main() {
 		// runner= some runner
 
 	}
-
+	fmt.Println("starting program")
 	runner.Start()
 }

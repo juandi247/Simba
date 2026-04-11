@@ -10,57 +10,60 @@ FLUJOS:
 
 
 
-- implement the logic of validating LastLogIndex vs LastTermINdex
-- implement the logic of heartbeats  - a separate gorouitnoe using a timer (or a ticker)
-
-
-
-
-Simulator: 
-- Add checker that shows how the state of the queue is (this can be updated inside the normal engine cycle)
-
-Reality: 
-
-- Start the configuration of the web server
-- Configure the Node
-- Have a map for all the nodes, (some config to manage ips) 
-
-- Configuration from time manager, goroutiones to handle the timeouts. 
-
-CORE: 
-
-- Start the configuration for messages
-    - Healthcheck: this will reestart the value of the timeout on the current Time, so this can be also an interface method
-    -Commit
-    -Start a new Election (update term)
-    - Append Log
-- 
-
-
-
 
  
 TODOS GOOD: 
--Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type) 
 
--Switch state machine for all message types
+---- CORE RAFT----------
 
--En el switch poner o tneer algo para handlers, especificos, que puedan tener validacion con un middleware para evaluar el TERM, asi evitamos ponerle el GetGerm a la interface, y simplificamos todo. 
+(X) Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type) 
 
--Adapters (network, timer) owned by the engine loop, not the core
+( ) Agregar el tipo de mensaje de ElectionTimeout para reiniciar la eleccion y hacer reinicio. 
 
-- (X) Shuffle eligible events within a tick, seeded rng for reproducibility
+( ) En el switch poner o tneer algo para handlers, especificos, que puedan tener validacion con un middleware para evaluar el TERM, asi evitamos ponerle el GetGerm a la interface, y simplificamos todo. 
 
--Single threaded processing loop, bounded channel, bounded worker pool for sends
 
--ON the real implmenetation, the worker pool will only, fire and wait for the acknowledgment that the messagearrived. 
 
-Its NOT that the goroutine wait for the response. 
 
-The one in charge of that is the server itself and then the response will come from the previous received as a new message.
 
-- on the grpc call, we just need to send a type of NetworkMessage it will look something like: 
+
+----SIMULATOR-----------------------------------------
+( ) Add an http server configuration, Server side events SSE for the UI so that it shows the update, also 
+ the aproach for updating the data. Could be this json seralization or channel aproach idk
+
+(X) Shuffle eligible events within a tick, seeded rng for reproducibility
+
+( ) Checkear el node alive tambien para meterlo como mensaje para hacerle un shuffle
+
+
+
+
+-----REAL LIFE------
+( ) ON the real implmenetation, the worker pool will only, fire and wait for the acknowledgment that the messagearrived. 
+
+( ) Its NOT that the goroutine wait for the response. 
+
+( ) The one in charge of that is the server itself and then the response will come from the previous received as a new message.
+
+( )  on the grpc call, we just need to send a type of NetworkMessage it will look something like: 
 	NetworkMessage{
 	typeOfMessage: type  (this is to know which type to cast)
 	payload: bytes (this payload is the serialized data, coming from the struct used)
 	} so that the fucntion of receving, will pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+que puedo hacer para poder ver el comportamiento de mis nodos. 
+Algo fisico?, que avanza o se ve de alguna forma? CLI forma, o web forma????

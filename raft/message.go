@@ -9,6 +9,7 @@ const (
 	MsgRequestVoteResponse
 	MsgLeaderTimeout
 	MsgHeartbeatTimeout
+	MsgElectionTimeout
 	MsgNewEntry
 )
 
@@ -63,6 +64,9 @@ type LeaderTimeout struct {
 }
 
 type HeartbeatTimeout struct {
+}
+
+type ElectionTimeout struct {
 }
 
 /*
@@ -125,6 +129,12 @@ func (m HeartbeatTimeout) GetTerm() (int, bool) {
 }
 
 
+func (m ElectionTimeout) GetType() MessageType {
+	return MsgElectionTimeout
+}
+func (m ElectionTimeout) GetTerm() (int, bool) {
+	return 0, false
+}
 
 //workaround to get the receiver so that the message queue can deliver the message 
 func (m AppendEntries) GetReceiver() int {
@@ -152,5 +162,8 @@ func (m LeaderTimeout) GetReceiver() int {
 	return m.GetReceiver()
 }
 func (m HeartbeatTimeout) GetReceiver() int {
+	return m.GetReceiver()
+}
+func (m ElectionTimeout) GetReceiver() int {
 	return m.GetReceiver()
 }

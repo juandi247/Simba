@@ -32,10 +32,10 @@ func (s *SimNetwork) SendMessage(messages []raft.Message) {
 	for _, message := range messages {
 		var delayTicks int64
 		var lost bool
-		if isNetworkMessage(message){
+		if isNetworkMessage(message) {
 			lost, delayTicks = s.FuzzyConfig.RandomizeNetwork()
-		}else{
-			lost,delayTicks= false, 1
+		} else {
+			lost, delayTicks = false, 1
 		}
 		//TODO: there should be a tracker or something for the later UI that indicates that a message was LOST
 		if !lost {
@@ -51,18 +51,6 @@ func (s *SimNetwork) SendMessage(messages []raft.Message) {
 			s.messageQueue.queue[s.messageQueue.size] = simMessage
 		}
 	}
-}
-
-
-func isNetworkMessage(message raft.Message) bool{
-	/*
-this messages of Timeouts, come from goroutines in the real life, on the same execute, so they dont pass the simulated network fuzzer
-*/
-	if message.GetType() == raft.MsgLeaderTimeout || message.GetType()== raft.MsgHeartbeatTimeout{
-		return false
-	}
-	return true
-
 }
 
 

@@ -81,3 +81,9 @@ func (n *Node) TriggerHeartbeat() []Message {
 	messages = append(messages, HeartbeatTimeout{})
 	return messages
 }
+
+func (n *Node) TriggerElectionTimeout() []Message {
+	messages := newMessages()
+	messages = append(messages, HeartbeatTimeout{})
+	return messages
+}

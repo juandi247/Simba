@@ -18,6 +18,8 @@ switch m := message.(type) {
 		return n.handleHeartbeatTimeout()
 	case LeaderTimeout:
 		return n.handleLeaderTimeout()
+	case ElectionTimeout: 
+		return n.handleElectionTimeout()
 	default:
 		panic("assertion -> a message with unknown type received")
 	}
@@ -66,6 +68,13 @@ func (n *Node) handleRequestVoteResponse(msg RequestVoteResponse) []Message {
 
 func (n *Node) handleHeartbeatTimeout() []Message {
 	return n.StartElection()
+}
+
+func (n *Node) handleElectionTimeout() []Message {
+	if n.Role!=CANDIDATE {
+		return n.StartElection()
+	}
+	return nil
 }
 
 func (n *Node) handleLeaderTimeout() []Message {

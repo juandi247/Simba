@@ -1,48 +1,16 @@
 package simulator
 
 import (
+	"fmt"
 	"math/rand"
 	raft "simba/raft"
+	"time"
 )
-
-const TickFrequency = 1
-const maxTicks = 1000000
-const maxQueueSize = 100000
-const maxInboxSize = 10000
-
-const LeaderHeartbeatFreq = 10
-const MinFollowerTimeout = 30
-const MaxFollowerTimeout = 50
-
-/*
-this are some assertions, so that no one starts puting wrong ranges, that will generate numbers outside of the deifned behaviour
-*/
-func init() {
-	if LeaderHeartbeatFreq >= MinFollowerTimeout || LeaderHeartbeatFreq >= MaxFollowerTimeout {
-		panic("the leader heart beat MUST be smaller than both minfollower and maxfollower timeouts")
-	}
-
-	if MinFollowerTimeout >= MaxFollowerTimeout {
-		panic("the minfollowre must be smaller than the max")
-	}
-
-	if minCrashNodeDowntime >= maxCrashNodeDowntime {
-		panic("the minCrashNodeDowntime must be smaller than the max")
-	}
-
-	if minLatencyDelay >= maxCrashNodeDowntime {
-		panic("the minCrashNodeDowntime must be smaller than the max")
-	}
-}
 
 type SimulationRunner struct {
 	Time               *SimTime
 	Network            *SimNetwork
 	FuzzyProbabilities FuzzyConfig
-}
-
-func generateFollowerTimeout(rng *rand.Rand) uint32 {
-	return uint32(MinFollowerTimeout + rng.Intn(MaxFollowerTimeout-MinFollowerTimeout+1))
 }
 
 func (s *SimulationRunner) Start() {
@@ -66,16 +34,19 @@ func (s *SimulationRunner) Start() {
 	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
 	nodeList := initializeNodes(s.FuzzyProbabilities)
 
+	fmt.Println("Configuration finished. Starting loop")
 	// Engine Loop of execution
 	for s.Time.Now() <= maxTicks {
 		// advance 1 tick
 		s.Time.Advance(TickFrequency)
 
-		handleNodeCrash(nodeList, s.FuzzyProbabilities, s.Time.Now())
+		crashNodes(nodeList, s.FuzzyProbabilities, s.Time.Now())
 
 		updateNodeTimers(nodeList)
 
 		handleComeBackToLiveNode(nodeList, s.Time.Now())
+
+		handleTimeout(nodeList, s.Network)
 
 		//this is ONLY to read the queue and put the messages into the inbox. No logic of delivering messages to any node here.
 		if s.Network.messageQueue.size > 0 {
@@ -83,10 +54,15 @@ func (s *SimulationRunner) Start() {
 
 		}
 		if s.Network.messageInbox.size > 0 {
+			shuffleInbox(s.FuzzyProbabilities.rand, s.Network)
 			deliverInboxMessages(s.Network, nodeList)
 		}
 
-		handleTimeout(nodeList, s.Network)
+		fmt.Printf("Tick %v completed. \n", s.Time.Now())
+		time.Sleep(1 * time.Second)
+		if s.Time.Now() >= 20 {
+			panic("finisheddd")
+		}
 
 	}
 }
@@ -122,6 +98,7 @@ func initializeNodes(fuzzyProbabilites FuzzyConfig) []*raft.Node {
 				Alive:                  true,
 				ComeBackToLiveTick:     0,
 				Timeoutcounter:         timeout,
+				ElectionTimeoutCounter: ElectionTimeout,
 			},
 		}
 	}
@@ -130,7 +107,7 @@ func initializeNodes(fuzzyProbabilites FuzzyConfig) []*raft.Node {
 
 }
 
-func handleNodeCrash(nodeList []*raft.Node, fuzzyProbabilites FuzzyConfig, currentTick int64) {
+func crashNodes(nodeList []*raft.Node, fuzzyProbabilites FuzzyConfig, currentTick int64) {
 	for _, node := range nodeList {
 		shouldCrash, comeBackToLiveTick := fuzzyProbabilites.determineCrashingProbabily()
 		if !shouldCrash {
@@ -143,11 +120,17 @@ func handleNodeCrash(nodeList []*raft.Node, fuzzyProbabilites FuzzyConfig, curre
 
 func updateNodeTimers(nodeList []*raft.Node) {
 	for _, node := range nodeList {
-		if node.Id == node.Leader {
+		switch node.Role {
+		case raft.LEADER:
 			node.SimulatorFields.LeaderHeartbeatCounter--
-		} else {
+		case raft.CANDIDATE:
+			node.SimulatorFields.ElectionTimeoutCounter--
+		case raft.FOLLOWER:
 			node.SimulatorFields.Timeoutcounter--
+		default:
+			panic("a node does not have a valid role")
 		}
+
 	}
 }
 
@@ -226,17 +209,22 @@ func handleTimeout(nodeList []*raft.Node, sm *SimNetwork) {
 			return
 		}
 
-		if node.Role == raft.LEADER && int(node.SimulatorFields.LeaderHeartbeatCounter) <= 0 {
-			msg := node.TriggerHeartbeat()
-			sm.SendMessage(msg)
-			continue
-		}
-
-		// for both FOLLOWER and CANDIDATE
-		if node.SimulatorFields.Timeoutcounter <= 0 {
-			timeoutMessage := node.TriggerTimeout()
-			//this message will triger a timeout election
-			sm.SendMessage(timeoutMessage)
+		switch node.Role {
+		case raft.LEADER:
+			if node.SimulatorFields.LeaderHeartbeatCounter <= 0 {
+				msg := node.TriggerHeartbeat()
+				sm.SendMessage(msg)
+			}
+		case raft.FOLLOWER:
+			if node.SimulatorFields.Timeoutcounter <= 0 {
+				timeoutMessage := node.TriggerTimeout()
+				sm.SendMessage(timeoutMessage)
+			}
+		case raft.CANDIDATE:
+			if node.SimulatorFields.ElectionTimeoutCounter <= 0 {
+				timeoutMessage := node.TriggerElectionTimeout()
+				sm.SendMessage(timeoutMessage)
+			}
 		}
 	}
 }
