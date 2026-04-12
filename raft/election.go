@@ -46,27 +46,15 @@ func (n *Node) VoteReceived(msg RequestVoteResponse) []Message {
 
 func (n *Node) BecomeLeader() []Message {
 	n.RoleTransition(LEADER)
-	messages := newMessages()
 
-	//TODO: here should be the clean up of timers, like the electionTimeout
-	//cleanupTimersMessages()
+	/* TODO: here should be the clean up of timers, like the electionTimeout
+	also check if we RESTART the values of
+		-NextIndex
+		-MatchIndex
+	cleanupTimersMessages() */
 
-	for _, v := range n.FriendNodesId {
-		messages = append(messages, AppendEntries{
-			Sender:   n.Id,
-			Receiver: v,
-
-			Term:        n.CurrentTerm,
-			CommitIndex: int(n.CommitIndex),
-
-			//TODO: check this indexes, because im not sure if they are restarted
-			//or what happens on the transition to becoming a leader, if they start from scratch or what.
-
-			NextIndex:  n.NextIndex[v],
-			MatchIndex: n.MatchIndex[v],
-		})
-	}
-
+	//send nil because its just a heartbeat with NO data
+	messages := n.buildAppendEntriesMessages(nil)
 	return messages
 }
 

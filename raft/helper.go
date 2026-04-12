@@ -8,7 +8,12 @@ func (n *Node) RoleTransition(targetRole Role) {
 
 	switch targetRole {
 	case FOLLOWER:
+		n.Role= FOLLOWER
 	case LEADER:
+		if n.Role==FOLLOWER{
+			panic("a follower can not become a leader, without being a candidae first")
+		}
+		n.Role= LEADER
 	case CANDIDATE:
 		if n.Role == LEADER {
 			// assertion!!

@@ -29,10 +29,9 @@ type AppendEntries struct {
 	LogEntries []LogBase
 
 	CommitIndex int
-	LastApplied int //todo: check if this one is worth it or not. dont thinkso but ok
 
-	NextIndex  int
-	MatchIndex int
+	PrevLogIndex  int
+	PrevLogTerm int
 }
 
 type AppendEntriesResponse struct {

@@ -8,7 +8,7 @@ func (n *Node) ProcessMessage(message Message) []Message {
 switch m := message.(type) {
 	//todo: they need to implement the interface, thats why the error appears
 	case NewEntry:
-		return n.handleNewEntry(m)
+		return n.handleLeaderEntry(m)
 	case AppendEntries:
 	case AppendEntriesResponse:
 	case RequestVote:
@@ -27,9 +27,19 @@ switch m := message.(type) {
 	return nil
 }
 
-func (n *Node) handleNewEntry(entry NewEntry) []Message {
-	return n.AppendToLog(entry)
+
+func (n *Node) handleLeaderEntry(entry NewEntry) []Message {
+	err := n.AppendToLog(entry, int(n.CurrentTerm))
+
+	if err != nil {
+		panic("some error ocurred inside the append To log")
+	}
+
+	tmpLog := buildTempLog(entry, int(n.CurrentTerm))
+	messages := n.buildAppendEntriesMessages(tmpLog)
+	return messages
 }
+
 
 func (n *Node) HandleAppendEntries(msg AppendEntries) []Message {
 	if msg.Term < n.CurrentTerm {
@@ -78,21 +88,8 @@ func (n *Node) handleElectionTimeout() []Message {
 }
 
 func (n *Node) handleLeaderTimeout() []Message {
-	messages:= newMessages()
-	for _,v:=range n.FriendNodesId{
-		messages=append(messages, AppendEntries{
-			Sender    :n.Id,
-			Receiver  : v, 
-			Term      : n.CurrentTerm,
-			LogEntries: nil,
-			CommitIndex: int(n.CommitIndex),
-
-			//LastApplied: n.LastApplied, 
-			NextIndex: 0,
-			MatchIndex:0,
-		})
-	}
-	return messages 
+	//nil because its just send the heartbeats 
+	return n.buildAppendEntriesMessages(nil)
 }
 
 
