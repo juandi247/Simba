@@ -17,12 +17,12 @@ func main() {
 	var runner adapters.Runner
 
 	if matrixMode {
-		
+
 		fuzzyConfig := simulator.FuzzyConfiguration(SEED, fuzzyLevel)
 
 		runner = &simulator.SimulationRunner{
-			Time:          &simulator.SimTime{},
-			Network:      &simulator.SimNetwork{},
+			Time:               &simulator.SimTime{},
+			Network:            &simulator.SimNetwork{},
 			FuzzyProbabilities: fuzzyConfig,
 		}
 

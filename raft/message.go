@@ -35,6 +35,8 @@ type AppendEntries struct {
 }
 
 type AppendEntriesResponse struct {
+	Sender int
+	Receiver int
 	Term    int
 	Success bool
 }
