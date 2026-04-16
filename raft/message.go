@@ -76,7 +76,7 @@ func (n *Node) ProcessMessage(message Message) []Message {
 	case AppendEntriesResponse:
 		return n.HandleAppendEntriesResponse(m)
 	case RequestVoteResponse:
-		return n.VoteReceived(m)
+		return n.HandleRequestVoteResponse(m)
 	case LeaderTimeout:
 		//heartbeats
 		return n.buildAppendEntries(nil)

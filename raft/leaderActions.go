@@ -33,7 +33,7 @@ func (n *Node) HandleAppendEntriesResponse(msg AppendEntriesResponse) []Message 
 }
 
 
-func (n *Node) VoteReceived(msg RequestVoteResponse) []Message {
+func (n *Node) HandleRequestVoteResponse(msg RequestVoteResponse) []Message {
 	if !msg.VoteGranted {
 		return nil
 	}
