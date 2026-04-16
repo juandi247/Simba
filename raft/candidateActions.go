@@ -35,7 +35,7 @@ func (n *Node) BecomeLeader() []Message {
 	cleanupTimersMessages() */
 
 	//send nil because its just a heartbeat with NO data
-	messages := n.buildAppendEntriesMessages(nil)
+	messages := n.buildAppendEntries(nil)
 	return messages
 }
 

@@ -8,7 +8,7 @@ func (n *Node) handleLeaderEntry(entry NewEntry) []Message {
 	}
 
 	tmpLog := buildTempLog(entry, int(n.CurrentTerm))
-	messages := n.buildAppendEntriesMessages(tmpLog)
+	messages := n.buildAppendEntries(tmpLog)
 	return messages
 }
 
@@ -52,7 +52,7 @@ func (n *Node) VoteReceived(msg RequestVoteResponse) []Message {
 	return messages
 }
 
-func (n *Node) buildAppendEntriesMessages(lb []LogBase) []Message {
+func (n *Node) buildAppendEntries(lb []LogBase) []Message {
 	if n.Role!=LEADER{
 		panic("non leader wants to send a hearbeat or appendentries")
 	}

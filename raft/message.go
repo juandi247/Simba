@@ -79,7 +79,7 @@ func (n *Node) ProcessMessage(message Message) []Message {
 		return n.VoteReceived(m)
 	case LeaderTimeout:
 		//heartbeats
-		return n.buildAppendEntriesMessages(nil)
+		return n.buildAppendEntries(nil)
 
 	//CANDIDATE METHODS
 	case ElectionTimeout:
