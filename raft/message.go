@@ -15,10 +15,6 @@ const (
 
 type Message interface {
 	GetType() MessageType
-	/* bool represents here if the message contains a Term, help us ignore the validation of term on some messages
-	example: the new entry does not have a term, because comes directly from the client
-	*/
-	GetTerm() (int, bool)
 	GetReceiver() int
 }
 
@@ -30,15 +26,15 @@ type AppendEntries struct {
 
 	CommitIndex int
 
-	PrevLogIndex  int
-	PrevLogTerm int
+	PrevLogIndex int
+	PrevLogTerm  int
 }
 
 type AppendEntriesResponse struct {
-	Sender int
+	Sender   int
 	Receiver int
-	Term    int
-	Success bool
+	Term     int
+	Success  bool
 }
 
 type RequestVote struct {
@@ -70,35 +66,57 @@ type HeartbeatTimeout struct {
 type ElectionTimeout struct {
 }
 
-/*
-Implement the message interface for all the messages to be received
-*/
+func (n *Node) ProcessMessage(message Message) []Message {
+
+	switch m := message.(type) {
+
+	//LEADER METHODS
+	case NewEntry:
+		return n.handleLeaderEntry(m)
+	case AppendEntriesResponse:
+		return n.HandleAppendEntriesResponse(m)
+	case RequestVoteResponse:
+		return n.VoteReceived(m)
+	case LeaderTimeout:
+		//heartbeats
+		return n.buildAppendEntriesMessages(nil)
+
+	//CANDIDATE METHODS
+	case ElectionTimeout:
+		if n.Role != CANDIDATE {
+			return n.StartElection()
+		}
+		return nil
+
+	//FOLLOWER METHODS
+	case AppendEntries:
+		return n.handleAppendEntries(m)
+	case RequestVote:
+		return n.handleRequestVote(m)
+	case HeartbeatTimeout:
+		return n.StartElection()
+	default:
+		panic("assertion -> a message with unknown type received")
+	}
+
+}
+
+/*NOTE: This are the implementations of the interface for all the posible incomming messages*/
+
 func (m AppendEntries) GetType() MessageType {
 	return MsgAppendEntries
-}
-func (m AppendEntries) GetTerm() (int, bool) {
-	return int(m.Term), true
 }
 
 func (m AppendEntriesResponse) GetType() MessageType {
 	return MsgAppendEntriesResponse
 }
-func (m AppendEntriesResponse) GetTerm() (int, bool) {
-	return int(m.Term), true
-}
 
 func (m RequestVote) GetType() MessageType {
 	return MsgRequestVote
 }
-func (m RequestVote) GetTerm() (int, bool) {
-	return int(m.Term), true
-}
 
 func (m RequestVoteResponse) GetType() MessageType {
 	return MsgRequestVoteResponse
-}
-func (m RequestVoteResponse) GetTerm() (int, bool) {
-	return int(m.Term), true
 }
 
 /*
@@ -110,34 +128,21 @@ being events inside the node. Therefore they DONT have term
 func (m NewEntry) GetType() MessageType {
 	return MsgNewEntry
 }
-func (m NewEntry) GetTerm() (int, bool) {
-	return 0, false
-}
 
 //timeouts
 func (m LeaderTimeout) GetType() MessageType {
 	return MsgLeaderTimeout
 }
-func (m LeaderTimeout) GetTerm() (int, bool) {
-	return 0, false
-}
 
 func (m HeartbeatTimeout) GetType() MessageType {
 	return MsgHeartbeatTimeout
 }
-func (m HeartbeatTimeout) GetTerm() (int, bool) {
-	return 0, false
-}
-
 
 func (m ElectionTimeout) GetType() MessageType {
 	return MsgElectionTimeout
 }
-func (m ElectionTimeout) GetTerm() (int, bool) {
-	return 0, false
-}
 
-//workaround to get the receiver so that the message queue can deliver the message 
+//workaround to get the receiver so that the message queue can deliver the message
 func (m AppendEntries) GetReceiver() int {
 	return m.GetReceiver()
 }
@@ -153,7 +158,6 @@ func (m RequestVote) GetReceiver() int {
 func (m RequestVoteResponse) GetReceiver() int {
 	return m.GetReceiver()
 }
-
 
 func (m NewEntry) GetReceiver() int {
 	return m.GetReceiver()

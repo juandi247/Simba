@@ -25,25 +25,6 @@ func (n *Node) StartElection() []Message {
 	return messages
 }
 
-func (n *Node) VoteReceived(msg RequestVoteResponse) []Message {
-	if !msg.VoteGranted {
-		return nil
-	}
-
-	n.NumberOfVotes++
-
-	if n.NumberOfVotes > int(TotalNodesNumber) {
-		panic("we have more votes than actual number of nodes")
-	}
-
-	if n.NumberOfVotes < int(Quorum) {
-		return nil
-	}
-
-	messages := n.BecomeLeader()
-	return messages
-}
-
 func (n *Node) BecomeLeader() []Message {
 	n.RoleTransition(LEADER)
 
@@ -58,20 +39,3 @@ func (n *Node) BecomeLeader() []Message {
 	return messages
 }
 
-func (n *Node) TriggerTimeout() []Message {
-	messages := newMessages()
-	messages = append(messages, LeaderTimeout{})
-	return messages
-}
-
-func (n *Node) TriggerHeartbeat() []Message {
-	messages := newMessages()
-	messages = append(messages, HeartbeatTimeout{})
-	return messages
-}
-
-func (n *Node) TriggerElectionTimeout() []Message {
-	messages := newMessages()
-	messages = append(messages, HeartbeatTimeout{})
-	return messages
-}
