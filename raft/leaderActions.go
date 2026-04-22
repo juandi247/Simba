@@ -24,6 +24,14 @@ func (n *Node) HandleAppendEntriesResponse(msg AppendEntriesResponse) []Message 
 		return nil
 	}
 
+
+	/*
+	 if its a success, we need to know which index is. because if not, we will update the value as 
+random. not per order of deliver. 
+
+*/
+
+
 	n.MatchIndex[followerId] = n.NextIndex[followerId] - 1
 	n.NextIndex[followerId]++
 

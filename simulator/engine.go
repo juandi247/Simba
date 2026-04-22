@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	raft "simba/raft"
 	"time"
@@ -11,9 +12,23 @@ type SimulationRunner struct {
 	Time               *SimTime
 	Network            *SimNetwork
 	FuzzyProbabilities FuzzyConfig
+	Port               string
+	IsHttps            bool
 }
 
 func (s *SimulationRunner) Start() {
+
+	server := NewServer(s.Port, s.IsHttps)
+
+	go func(){
+
+		err:= server.StartServer()
+
+		if err!=nil{
+			log.Fatal("the server failed: ", err)
+		}
+		log.Println("server started correctlz")
+	}()
 
 	// Config for the simulated Time struct
 	s.Time.Tick = 0

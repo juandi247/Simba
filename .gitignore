@@ -1,0 +1,6 @@
+cls 
+lint-report.xml
+.sonar*
+.scannerwork*
+coverage.out
+sonar-config.properties

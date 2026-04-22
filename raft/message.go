@@ -34,6 +34,7 @@ type AppendEntriesResponse struct {
 	Sender   int
 	Receiver int
 	Term     int
+	LastLogIndex int
 	Success  bool
 }
 

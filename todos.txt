@@ -18,7 +18,11 @@ TODOS GOOD:
 
 (X) Set up the interfaces for each message, and some methods to handle. (it fehlt the timeouts from both leader and heartbeat type) 
 
-( ) Agregar el tipo de mensaje de ElectionTimeout para reiniciar la eleccion y hacer reinicio. 
+(X) Agregar el tipo de mensaje de ElectionTimeout para reiniciar la eleccion y hacer reinicio. 
+
+( ) faltar simular commitear .pero esto podria ser al final final 
+
+( ) falta simular el guardar en persisent state el VOTED FOR, importante eso
 
 ( ) En el switch poner o tneer algo para handlers, especificos, que puedan tener validacion con un middleware para evaluar el TERM, asi evitamos ponerle el GetGerm a la interface, y simplificamos todo. 
 
@@ -65,5 +69,72 @@ TODOS GOOD:
 
 
 
-que puedo hacer para poder ver el comportamiento de mis nodos. 
-Algo fisico?, que avanza o se ve de alguna forma? CLI forma, o web forma????
+LEADER 
+
+LOG [ [1,x], [1,y] , [1,h], [1,j] ]
+nextIndex = [4, 4, 4]
+matchIndex = [3, 3, 3]
+
+commitIndex = 3
+
+
+
+
+Follower1
+LOG [ [1,x], [1,y] , [1,h], [1,j] ]
+
+Follower2
+LOG [ [1,x], [1,y] , [1,h], [1,j] ]
+
+Follower3
+LOG [ [1,x], [1,y] , [1,h], [1,j] ]
+
+
+
+
+
+
+APPEND ENTRY: S
+
+LEADER builds appendEntry like: 
+{
+	Term= 1
+	Entry = [S]
+	prevLogIndex = 3 
+	prevLogTerm = 1
+}
+
+
+
+
+
+
+Followers respond all with SUCCESS
+	leader.prevLogIndex = 3   isEQUAL  follower.lastLogIndex=3
+	term are the same
+
+
+
+LEADER: 
+
+For follower 1 
+MatchIndex[Follower1] = PrevLogIndex(sent in the message)    -> because we know that 
+NextIndex[Follower1] = 3
+NextIndex[Follower1]++ = 4
+
+MatchIndex 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

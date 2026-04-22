@@ -24,6 +24,8 @@ func main() {
 			Time:               &simulator.SimTime{},
 			Network:            &simulator.SimNetwork{},
 			FuzzyProbabilities: fuzzyConfig,
+			Port: "8080",
+			IsHttps: false,
 		}
 
 	} else {
@@ -37,3 +39,11 @@ func main() {
 	runner.Start()
 }
 
+
+
+
+
+func coso(i, j int) int{
+
+return i+j
+}

@@ -49,9 +49,9 @@ func (n *Node) handleAppendEntries(message AppendEntries) []Message {
 	}
 
 	var success = false
-	lastEntry := n.Log.Size
+	lastEntryIndex := n.Log.Size
 
-	if message.PrevLogIndex <= lastEntry {
+	if message.PrevLogIndex <= lastEntryIndex {
 		if message.PrevLogTerm == n.Log.LogArr[message.PrevLogIndex].Term {
 			success = true
 		}
@@ -61,6 +61,7 @@ func (n *Node) handleAppendEntries(message AppendEntries) []Message {
 	messages = append(messages, AppendEntriesResponse{
 		Term:    int(n.CurrentTerm),
 		Success: success,
+		LastLogIndex: lastEntryIndex,
 	})
 
 	return messages
