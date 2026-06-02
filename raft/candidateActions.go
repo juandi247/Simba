@@ -4,7 +4,8 @@ func (n *Node) StartElection() []Message {
 	n.RoleTransition(CANDIDATE)
 	n.NumberOfVotes = 0
 	n.CurrentTerm++
-	n.VotedFor = n.Id
+	//NOTE: Votes for itself
+	n.VotedFor[int(n.CurrentTerm)]= n.Id
 
 	messages := newMessages()
 	lastLogIndex := n.Log.Size

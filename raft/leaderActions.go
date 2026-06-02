@@ -60,7 +60,7 @@ func (n *Node) HandleRequestVoteResponse(msg RequestVoteResponse) []Message {
 	return messages
 }
 
-func (n *Node) buildAppendEntries(lb []LogBase) []Message {
+func (n *Node) buildAppendEntries(lb []*LogBase) []Message {
 	if n.Role!=LEADER{
 		panic("non leader wants to send a hearbeat or appendentries")
 	}

@@ -32,3 +32,4 @@ func (n *Node) TriggerElectionTimeout() []Message {
 	messages = append(messages, HeartbeatTimeout{})
 	return messages
 }
+

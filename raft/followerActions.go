@@ -7,16 +7,19 @@ func (n *Node) handleRequestVote(msg RequestVote) []Message {
 		VoteGranted: false,
 	})
 
-	if msg.Term <= n.CurrentTerm {
+	if msg.Term < n.CurrentTerm {
 		return messages
 	}
 
-	/*TODO: Check for this voted for, because on the jump to state, the voted for can be restarted (?)
-	this can be, if its a new term, then i wont have voted for anyone, the check of who i voted for should be onlz on if both match(?)
-	*/
-	if n.VotedFor != 0 {
+	n.CurrentTerm  = msg.Term
+ 	
+	_, exists:=n.VotedFor[int(n.CurrentTerm)];
+
+	if exists  {
 		return messages
 	}
+
+
 	n.RoleTransition(FOLLOWER)
 
 	currLastIndex := n.Log.Size
@@ -30,7 +33,7 @@ func (n *Node) handleRequestVote(msg RequestVote) []Message {
 		return messages
 	}
 
-	n.VotedFor = msg.Sender
+	n.VotedFor[int(n.CurrentTerm)] = msg.Sender
 	messages[0] = RequestVoteResponse{
 		Term:        int(n.CurrentTerm),
 		VoteGranted: true,
@@ -39,7 +42,7 @@ func (n *Node) handleRequestVote(msg RequestVote) []Message {
 }
 
 func (n *Node) handleAppendEntries(message AppendEntries) []Message {
-	//TODO: check this for a middeware easier
+
 	if message.Term < n.CurrentTerm {
 		return nil
 	}
@@ -54,6 +57,9 @@ func (n *Node) handleAppendEntries(message AppendEntries) []Message {
 	if message.PrevLogIndex <= lastEntryIndex {
 		if message.PrevLogTerm == n.Log.LogArr[message.PrevLogIndex].Term {
 			success = true
+			n.Log.LogArr = append(n.Log.LogArr, message.LogEntries...)
+
+			n.Log.Size+= len(message.LogEntries)
 		}
 	}
 

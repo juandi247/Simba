@@ -99,7 +99,7 @@ func initializeNodes(fuzzyProbabilites FuzzyConfig) []*raft.Node {
 			CurrentTerm:   0,
 			//leader NOT USED because all will start as candidates. so this will be null for now (or cero)
 			Leader:   0,
-			VotedFor: 0,
+			VotedFor: make(map[int]int),
 			Log: raft.Log{
 				Size:   0,
 				LogArr: make([]*raft.LogBase, raft.MaxLogSize),

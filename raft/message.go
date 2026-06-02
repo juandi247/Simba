@@ -22,7 +22,7 @@ type AppendEntries struct {
 	Sender     int
 	Receiver   int
 	Term       uint64
-	LogEntries []LogBase
+	LogEntries []*LogBase
 
 	CommitIndex int
 

@@ -26,7 +26,7 @@ type Node struct {
 	//Persistent values
 	CurrentTerm uint64
 	Log         Log
-	VotedFor    int
+	VotedFor    map[int]int
 
 	Id            int                  //this would be probably ip addres, or something, not sure
 	FriendNodesId [TotalNodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send

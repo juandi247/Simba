@@ -31,10 +31,10 @@ func (n *Node) RoleTransition(targetRole Role) {
 	}
 }
 
-func buildTempLog(entry NewEntry, term int) []LogBase {
-	arr := make([]LogBase, 1)
+func buildTempLog(entry NewEntry, term int) []*LogBase {
+	arr := make([]*LogBase, 1)
 
-	logEntry := LogBase{
+	logEntry := &LogBase{
 		Term:  int(term),
 		Entry: entry.Command,
 	}
