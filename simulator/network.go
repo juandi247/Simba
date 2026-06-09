@@ -1,34 +1,28 @@
 package simulator
 
 import (
+	"fmt"
 	"simba/adapters"
 	raft "simba/raft"
 )
 
 type SimNetwork struct {
-	messageQueue *messageQueue
-	messageInbox *messageInbox
+	messageQueue *PriorityQueue
 	FuzzyConfig  FuzzyConfig
 	TimeAdapter  adapters.TimeAdapter
 }
 
 type SimMessage struct {
-	DeliveryTick int64
+	index int
+	id int
+	DeliveryTick int
 	Message      raft.Message
 }
 
-type messageQueue struct {
-	queue       []SimMessage
-	size        uint64
-	copyCounter uint64
-}
 
-type messageInbox struct {
-	inbox []raft.Message
-	size  uint64
-}
 
 func (s *SimNetwork) SendMessage(messages []raft.Message) {
+	fmt.Printf("we are going to put in teh queue %v messages \n", len(messages))
 	for _, message := range messages {
 		var delayTicks int64
 		var lost bool
@@ -40,17 +34,60 @@ func (s *SimNetwork) SendMessage(messages []raft.Message) {
 		//TODO: there should be a tracker or something for the later UI that indicates that a message was LOST
 		if !lost {
 			simMessage := SimMessage{
-				DeliveryTick: s.TimeAdapter.Now() + delayTicks,
+				DeliveryTick: int(s.TimeAdapter.Now() + delayTicks),
 				Message:      message,
 			}
-
-			if s.messageQueue.size >= maxQueueSize {
-				panic("MESSAGE QUEUE is FULL")
-			}
-			s.messageQueue.size++
-			s.messageQueue.queue[s.messageQueue.size] = simMessage
+			s.messageQueue.Push(&simMessage)
 		}
 	}
 }
 
 
+
+
+
+type PriorityQueue []*SimMessage
+
+
+func (pq *PriorityQueue) Peek() *SimMessage {
+	if pq.Len() == 0 {
+		return nil
+	}
+	return (*pq)[0]
+}
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	if pq[i].DeliveryTick == pq[j].DeliveryTick {
+		return pq[i].index < pq[j].index
+	}
+	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
+	return pq[i].DeliveryTick < pq[j].DeliveryTick
+}
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *PriorityQueue) Push(x any) {
+	n := len(*pq)
+	item := x.(*SimMessage)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() any {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil  // don't stop the GC from reclaiming the item eventually
+	item.index = -1 // for safety
+	*pq = old[0 : n-1]
+	return item
+}
+
+// update modifies the priority and value of an Item in the queue.
+func (pq *PriorityQueue) update(item *SimMessage, value string, priority int) {
+}

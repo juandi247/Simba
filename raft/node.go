@@ -29,7 +29,7 @@ type Node struct {
 	VotedFor    map[int]int
 
 	Id            int                  //this would be probably ip addres, or something, not sure
-	FriendNodesId [TotalNodesNumber - 1]int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
+	FriendNodesId []int //this would be probaly a list or pool of ip addreses, and in the simulator just the ID to send
 	Role          Role
 	Leader        int
 	NumberOfVotes int

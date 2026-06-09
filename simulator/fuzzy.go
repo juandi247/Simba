@@ -1,6 +1,9 @@
 package simulator
 
-import "math/rand"
+import (
+	"fmt"
+	"math/rand"
+)
 
 
 type FuzzyLevel int
@@ -21,25 +24,25 @@ type FuzzyConfig struct {
 const minCrashNodeDowntime= 10
 const maxCrashNodeDowntime=50
 
-const minLatencyDelay= 10
-const maxLatencyDelay=50
+const minLatencyDelay= 1
+const maxLatencyDelay= 3
 
 
 var FuzzyConfigMap = map[FuzzyLevel]FuzzyConfig{
 	LOW: {
 		LatencyProb:     0.01,
-		MessageLostProb: 0.01,
-		NodeCrashProb: 0.01,
+		MessageLostProb: 0.001,
+		NodeCrashProb: 0.001,
 	},
 	MEDIUM: {
 		LatencyProb:     0.05,
-		MessageLostProb: 0.05,
-		NodeCrashProb: 2.00,
+		MessageLostProb: 0.005,
+		NodeCrashProb: 0.005,
 	},
 	HIGH: {
 		LatencyProb:     0.10,
-		MessageLostProb: 0.10,
-		NodeCrashProb: 5.00,
+		MessageLostProb: 0.010,
+		NodeCrashProb: 0.01,
 	},
 }
 
@@ -61,7 +64,11 @@ func (fc *FuzzyConfig) determineCrashingProbabily()(bool, int64){
 
 	randomNumber:= fc.rand.Float64()
 
-	if randomNumber > fc.NodeCrashProb {
+
+	if randomNumber < fc.NodeCrashProb {
+		fmt.Println("rndom number", randomNumber)
+		fmt.Println("crash probablity:", fc.NodeCrashProb)
+		fmt.Println("we crashed the node")
 		comeBackToLiveTick:=  minCrashNodeDowntime + fc.rand.Int63n(maxCrashNodeDowntime - minCrashNodeDowntime + 1)
 		return true, comeBackToLiveTick
 	}
@@ -78,7 +85,7 @@ int: the number of delay ticks
 func (fc *FuzzyConfig) RandomizeNetwork() (bool, int64){
 	randomNumber:= fc.rand.Float64()
 
-	if randomNumber > fc.MessageLostProb {
+	if randomNumber < fc.MessageLostProb {
 		// The message was determinted to be LOST
 		return true, 0
 	}

@@ -2,14 +2,14 @@ package simulator
 
 
 const TickFrequency = 1
-const maxTicks = 1000
+const maxTicks = 400
 const maxQueueSize = 100000
 const maxInboxSize = 10000
 
 const LeaderHeartbeatFreq = 10
-const ElectionTimeout = 100
-const MinFollowerTimeout = 75
-const MaxFollowerTimeout = 100
+const ElectionTimeout = 10
+const MinFollowerTimeout = 30
+const MaxFollowerTimeout = 50
 
 /*
 Assertions for ranges inside the constants, to have it in compile time. 

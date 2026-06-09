@@ -1,5 +1,7 @@
 package raft
 
+import "fmt"
+
 func (n *Node) handleLeaderEntry(entry NewEntry) []Message {
 	err := n.AppendToLog(entry, int(n.CurrentTerm))
 
@@ -24,13 +26,11 @@ func (n *Node) HandleAppendEntriesResponse(msg AppendEntriesResponse) []Message 
 		return nil
 	}
 
-
 	/*
-	 if its a success, we need to know which index is. because if not, we will update the value as 
-random. not per order of deliver. 
+			 if its a success, we need to know which index is. because if not, we will update the value as
+		random. not per order of deliver.
 
-*/
-
+	*/
 
 	n.MatchIndex[followerId] = n.NextIndex[followerId] - 1
 	n.NextIndex[followerId]++
@@ -40,34 +40,19 @@ random. not per order of deliver.
 	return []Message{}
 }
 
-
-func (n *Node) HandleRequestVoteResponse(msg RequestVoteResponse) []Message {
-	if !msg.VoteGranted {
-		return nil
-	}
-
-	n.NumberOfVotes++
-
-	if n.NumberOfVotes > int(TotalNodesNumber) {
-		panic("we have more votes than actual number of nodes")
-	}
-
-	if n.NumberOfVotes < int(Quorum) {
-		return nil
-	}
-
-	messages := n.BecomeLeader()
-	return messages
-}
-
 func (n *Node) buildAppendEntries(lb []*LogBase) []Message {
-	if n.Role!=LEADER{
+	if n.Role != LEADER {
 		panic("non leader wants to send a hearbeat or appendentries")
 	}
 	messages := newMessages()
 	for _, followerId := range n.FriendNodesId {
 		prevLogIndex := n.NextIndex[followerId] - 1
-		prevLogTerm := n.Log.LogArr[prevLogIndex].Term
+
+		prevLogTerm := 0
+		fmt.Println("prevlogindex:", prevLogIndex)
+		if prevLogIndex >= 0 {
+			prevLogTerm = n.Log.LogArr[prevLogIndex].Term
+		}
 
 		messages = append(messages, AppendEntries{
 			Sender:   n.Id,

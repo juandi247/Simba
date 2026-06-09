@@ -1,5 +1,7 @@
 package raft
 
+import "fmt"
+
 type MessageType int
 
 const (
@@ -31,11 +33,11 @@ type AppendEntries struct {
 }
 
 type AppendEntriesResponse struct {
-	Sender   int
-	Receiver int
-	Term     int
+	Sender       int
+	Receiver     int
+	Term         int
 	LastLogIndex int
-	Success  bool
+	Success      bool
 }
 
 type RequestVote struct {
@@ -50,51 +52,68 @@ type RequestVote struct {
 }
 
 type RequestVoteResponse struct {
+	Sender      int
+	Receiver    int
 	Term        int
 	VoteGranted bool
 }
 
 type NewEntry struct {
-	Command string
+	Receiver int
+	Command  string
 }
 
 type LeaderTimeout struct {
+	Receiver int
 }
 
 type HeartbeatTimeout struct {
+	Receiver int
 }
 
 type ElectionTimeout struct {
+	Receiver int
 }
 
 func (n *Node) ProcessMessage(message Message) []Message {
 
+fmt.Println("---- PROCESING MESSAGE NODE: ", n.Id, "-------")
+	defer fmt.Println("----End Procesing Message--- \n ")
+//	defer fmt.Println(" ----")
 	switch m := message.(type) {
 
 	//LEADER METHODS
 	case NewEntry:
+		fmt.Println("recevied new Entry")
 		return n.handleLeaderEntry(m)
 	case AppendEntriesResponse:
+		fmt.Println("recevied appendEntries respons")
 		return n.HandleAppendEntriesResponse(m)
 	case RequestVoteResponse:
+		fmt.Println("recevied requestVote respone")
 		return n.HandleRequestVoteResponse(m)
 	case LeaderTimeout:
+		fmt.Println("recevied lead timotu")
 		//heartbeats
 		return n.buildAppendEntries(nil)
 
 	//CANDIDATE METHODS
 	case ElectionTimeout:
 		if n.Role != CANDIDATE {
+			fmt.Println("received election timeout")
 			return n.StartElection()
 		}
 		return nil
 
 	//FOLLOWER METHODS
 	case AppendEntries:
+		fmt.Println("recevied appendEntries")
 		return n.handleAppendEntries(m)
 	case RequestVote:
+		fmt.Println("recevied request vote in node ", n.Id, "from: ", m.Sender)
 		return n.handleRequestVote(m)
 	case HeartbeatTimeout:
+		fmt.Println("recevied hb timeout")
 		return n.StartElection()
 	default:
 		panic("assertion -> a message with unknown type received")
@@ -130,7 +149,7 @@ func (m NewEntry) GetType() MessageType {
 	return MsgNewEntry
 }
 
-//timeouts
+// timeouts
 func (m LeaderTimeout) GetType() MessageType {
 	return MsgLeaderTimeout
 }
@@ -143,33 +162,33 @@ func (m ElectionTimeout) GetType() MessageType {
 	return MsgElectionTimeout
 }
 
-//workaround to get the receiver so that the message queue can deliver the message
+// workaround to get the receiver so that the message queue can deliver the message
 func (m AppendEntries) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 
 func (m AppendEntriesResponse) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 
 func (m RequestVote) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 
 func (m RequestVoteResponse) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 
 func (m NewEntry) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 
 func (m LeaderTimeout) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 func (m HeartbeatTimeout) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }
 func (m ElectionTimeout) GetReceiver() int {
-	return m.GetReceiver()
+	return m.Receiver
 }

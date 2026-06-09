@@ -20,6 +20,17 @@ func main() {
 
 		fuzzyConfig := simulator.FuzzyConfiguration(SEED, fuzzyLevel)
 
+/*	server := NewServer(s.Port, s.IsHttps)
+	go func(){
+
+		err:= server.StartServer()
+
+		if err!=nil{
+			log.Fatal("the server failed: ", err)
+		}
+		log.Println("server started correctlz")
+	}() */
+
 		runner = &simulator.SimulationRunner{
 			Time:               &simulator.SimTime{},
 			Network:            &simulator.SimNetwork{},

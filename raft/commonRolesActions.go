@@ -1,4 +1,7 @@
 package raft
+
+import "fmt"
+
 func (n *Node) AppendToLog(entry NewEntry, term int) error {
 
 	ls := n.Log.Size
@@ -16,20 +19,26 @@ func (n *Node) AppendToLog(entry NewEntry, term int) error {
 }
 
 func (n *Node) TriggerTimeout() []Message {
+	fmt.Println("printing myself", n.Id)
 	messages := newMessages()
-	messages = append(messages, LeaderTimeout{})
+	messages = append(messages, HeartbeatTimeout{
+		Receiver: n.Id,
+	})
 	return messages
 }
 
 func (n *Node) TriggerHeartbeat() []Message {
 	messages := newMessages()
-	messages = append(messages, HeartbeatTimeout{})
+	messages = append(messages, LeaderTimeout{
+		Receiver: n.Id,
+	})
 	return messages
 }
 
 func (n *Node) TriggerElectionTimeout() []Message {
 	messages := newMessages()
-	messages = append(messages, HeartbeatTimeout{})
+	messages = append(messages, HeartbeatTimeout{
+		Receiver: n.Id,
+	})
 	return messages
 }
-
